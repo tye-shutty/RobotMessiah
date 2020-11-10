@@ -8,10 +8,11 @@ import java.io.FileReader;
 public class RobotMessiah extends QuartoAgent{
 
     private class state{
-        int[][][] board = new int[5][5][5];
+        //x, then y, then characteristics, -1 for null
+        byte[][][] board = new byte[5][5][5];
         //first 5 dimensions are characteristics, last is x y coords
-        int[][][][][][] playedPieces = new int[2][2][2][2][2][2];
-        int piecesPlayed = 0;
+        byte[][][][][][] playedPieces = new byte[2][2][2][2][2][2];
+        byte piecesPlayed = 0;
     }
     private state currState = new state();
 
@@ -31,11 +32,11 @@ public class RobotMessiah extends QuartoAgent{
             try{
                 BufferedReader br = new BufferedReader(new FileReader(stateFileName));
                 String line;
-                int row = 0;
+                byte row = 0;
                 
                 while((line = br.readLine()) != null && row < 5){
                     String[] splitted = line.split("\\s+");
-                    for(int col=0; col<5; col++){
+                    for(byte col=0; col<5; col++){
     
                         if(!splitted[col].equals("null")){
                             for(int i=0;i<5;i++){
@@ -83,17 +84,15 @@ public class RobotMessiah extends QuartoAgent{
         if(args.length > 1){
             stateFileName = args[1];
         }
-
         gameClient.connectToServer(ip, 4321);
         RobotMessiah quartoAgent = new RobotMessiah(gameClient, stateFileName);
         quartoAgent.play();
 
         gameClient.closeConnection();
-
     }
     @Override
     protected String pieceSelectionAlgorithm(){
-        if(empty(board)){
+        if(empty(currState)){
             //return random piece
         }
         this.startTimer();
@@ -139,26 +138,19 @@ public class RobotMessiah extends QuartoAgent{
         return BinaryString;
     }
 
-    private QuartoPiece pivotLookup(QuartoPiece[][] board, boolean pivot, int i, int j){
+    private int[] pivotLookup(int[][][] board, boolean pivot, int i, int j){
         if(pivot){
             return board[j][i];
         }
         return board[i][j];
     }
-    public int bestPiece(int maxAgent, state s){
-        //for all pieces, call bestMove with each
-        //state is 3D vector, where x is x axis, y is y axis, and z is characteristics,
-        //if no piece played, all characteristics will be -1
-        
-    }
     //returns -1 for min win, 1 for max win, 0 for tie
     public int bestMove(int maxAgent, state s){
         //for all moves, call bestPiece with each, unless only one move left or won
-        int win = winOpenings(this.quartoBoard.board);
+        int win = ;
         if(s.piecesPlayed == 31){
-            //could be more efficient
-            return win > 0 ? maxAgent : 0;
-        } else if(win == 0){
+            
+        } else if(winOpenings(s) == 0){
             //check if win possible
             return 0
         } else if(){
@@ -173,6 +165,12 @@ public class RobotMessiah extends QuartoAgent{
             Boolean result = bestPiece(-1*maxAgent);
             
         }
+    }
+    public int bestPiece(int maxAgent, state s){
+        //for all pieces, call bestMove with each
+        //state is 3D vector, where x is x axis, y is y axis, and z is characteristics,
+        //if no piece played, all characteristics will be -1
+        
     }
     /**public state initializeState(){
         state s = new state();
@@ -192,22 +190,22 @@ public class RobotMessiah extends QuartoAgent{
     }**/
     //in future, consider machine learning to find ideal value for heuristic
     //returns sum of all win possibilities, ignorant of remaining pieces
-    public int winOpenings(QuartoPiece[][] state){
+    public int winOpenings(state s){
         int winPossibilities = 0; //1 possibility for every characteristic quintuple
-        this.startNanoTimer();
-
         //check rows and columns for win possibility(excludes existing peices)
         boolean pivot = false;
+
         for(int i=0; i<5; i++){
             int nullCount = 0;
             int[] currChars ={0,0,0,0,0};
+
             for(int j=0; j<5; j++){
-                if(pivotLookup(state, pivot,i,j) == null){
+                if(pivotLookup(s.board, pivot,i,j)[0] == -1){
                     nullCount++;
                 } else{
-                    boolean[] rc = pivotLookup(state, pivot,i,j).getCharacteristicsArray();
+                    int[] rc = pivotLookup(s.board, pivot,i,j);
                     for(int z=0;z<5;z++){
-                        currChars[z] += rc[z] ? 1 : 0;
+                        currChars[z] += rc[z];
                     }
                 }
             }
@@ -227,12 +225,12 @@ public class RobotMessiah extends QuartoAgent{
             int[] currChars ={0,0,0,0,0};
             int nullCount = 0;
             for(int j=0; j<5; j++){
-                if(this.quartoBoard.board[j][i[0]+i[1]*j] == null){
+                if(s.board[j][i[0]+i[1]*j][0] == -1){
                     nullCount++;
                 } else{
-                    boolean[] rc = this.quartoBoard.board[j][i[0]+i[1]*j].getCharacteristicsArray();
+                    int[] rc = s.board[j][i[0]+i[1]*j];
                     for(int z=0;z<5;z++){
-                        currChars[z] += rc[z] ? 1 : 0;
+                        currChars[z] += rc[z];
                     }
                 }
             }
