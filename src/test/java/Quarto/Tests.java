@@ -9,7 +9,22 @@ import java.io.FileWriter;
 public class Tests {
   public static void main(String[] args){
    //assertTrue(test2() == 42);
-   test3();
+   test4();
+  }
+  private static int test4(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    // try{
+    //   FileWriter fw = new FileWriter("test3");
+    //   fw.write(rm.currState.toString());
+    //   RobotMessiah.state s = rm.currState.copy();
+    //   fw.append(s.toString());
+    //   fw.close();
+    // } catch(Exception e){}
+    Common.prn(rm.currState.toString());
+    RobotMessiah.state s = rm.currState.copy();
+    Common.prn(s.toString());
+    return 1;
   }
 /*
   private static int test2(){
@@ -20,14 +35,17 @@ public class Tests {
   }*/
   private static int test3(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "near_win_state_diagonal");
-    try{
-      FileWriter fw = new FileWriter("test3");
-      fw.write(rm.currState.toString());
-      RobotMessiah.state s = rm.currState.copy();
-      fw.append(s.toString());
-      fw.close();
-    } catch(Exception e){}
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/near_win_state_diagonal");
+    // try{
+    //   FileWriter fw = new FileWriter("test3");
+    //   fw.write(rm.currState.toString());
+    //   RobotMessiah.state s = rm.currState.copy();
+    //   fw.append(s.toString());
+    //   fw.close();
+    // } catch(Exception e){}
+    Common.prn(rm.currState.toString());
+    RobotMessiah.state s = rm.currState.copy();
+    Common.prn(s.toString());
     return 1;
   }
 /*

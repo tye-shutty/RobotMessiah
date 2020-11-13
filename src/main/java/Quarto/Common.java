@@ -1,5 +1,4 @@
 package Quarto;
-
 //Author: Tye Shutty
 public class Common {
 

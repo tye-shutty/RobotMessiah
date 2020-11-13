@@ -1,7 +1,4 @@
-//Author: Tye Shutty
-//Adapted from Michael Flemming's code
 package Quarto;
-
 public class QuartoAgent {
 
 	protected static final int NUMBER_OF_ROWS = 5;

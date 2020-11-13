@@ -1,6 +1,6 @@
+package Quarto;
 //Author: Tye Shutty
 //Adapted from Michael Flemming's code
-package Quarto;
 
 import java.util.Scanner;
 

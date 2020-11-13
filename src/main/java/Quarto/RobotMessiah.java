@@ -1,6 +1,6 @@
+package Quarto;
 //Author: Tye Shutty
 //Adapted from Michael Flemming's code
-package Quarto;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Arrays;
@@ -39,12 +39,19 @@ public class RobotMessiah extends QuartoAgent{
             return temp;
         }
         public String toString(){
-            String ret = "[ ";
+            String ret = "[";
             for(byte i=0; i<5; i++){
                 if(i!=0){
-                    ret+="  ";
+                    ret+=" ";
                 }
-                ret+= Arrays.toString(board[i]);
+                ret+="[";
+                for (byte j=0; j<5; j++){
+                    ret+= String.format("%3d", board[i][j]);
+                    // if(j!=4){
+                    //     ret+=",";
+                    // }
+                }
+                ret+="]";
                 if(i!=4){
                     ret+="\n";
                 }
@@ -72,7 +79,7 @@ public class RobotMessiah extends QuartoAgent{
                             currState.board[row][col] = 0; //-1 -> 0
                             for(byte i=0;i<5;i++){
 
-                                if(splitted[col].charAt(i) == '1'){
+                                if(splitted[col].charAt(4-i) == '1'){
                                     currState.board[row][col] = (byte)(currState.board[row][col] | (1 << i));
                                 }
                             }
@@ -193,9 +200,9 @@ public class RobotMessiah extends QuartoAgent{
         }
         return tiePossible;
     }
-    public byte bestPiece(byte agent, state s){
+    public byte[] bestPiece(byte agent, state s){
         byte win = win(s);
-        byte tiePossible = (byte)(agent*-1); //opponent wins
+        byte tiePossible[] = {(byte)(agent*-1),(byte)(agent*-1)}; //opponent wins
         if(win == 1){
             return (byte)(win*agent);
         } else if(win == -1){
