@@ -165,34 +165,30 @@ public class RobotMessiah extends QuartoAgent{
         }
         return board[i][j];
     }
-    //returns -1 for min win, 1 for max win, 0 for tie
+    //0 is -1 for min win, 1 for max win, 0 for tie; 1&2 are x and y coords 
     //agent is -1 if min agent, 1 if max
-    public byte bestMove(byte agent, state s, byte piece){
+    public byte[] bestMove(byte agent, state s, byte piece){
         //for all moves, call bestPiece with each, unless only one move left or won
-        byte win = win(s);
-        byte tiePossible = (byte)(agent*-1); //opponent wins
-        if(win == 1){
-            return (byte)(win*agent);
-        } else if(win == -1){
-            return 0;
-        } else{
-            //for all moves (null spots), call bestPiece
-            for(byte i=0; i<5;i++){
-                for(byte j=0; j<5; j++){
+        byte[] tiePossible = {(byte)(agent*-1), (byte)-1, (byte)-1}; //opponent wins
+        //for all moves (null spots), call bestPiece
+        for(byte i=0; i<5;i++){
+            for(byte j=0; j<5; j++){
 
-                    if(s.board[i][j] == -1){
-                        //copy game state, add piece to null position
-                        state ns = s.copy();
-                        ns.board[i][j] = piece;
-                        ns.pieces[piece][0]= i;
-                        ns.pieces[piece][1]= j;
-                        //ns.numPlayed++;
-                        win = bestPiece(agent, ns);
-                        if(win == agent){
-                            return win;
-                        } else if(win==0){
-                            tiePossible = 0;
-                        }
+                if(s.board[i][j] == -1){
+                    //copy game state, add piece to null position
+                    state ns = s.copy();
+                    ns.board[i][j] = piece;
+                    ns.pieces[piece][0]= i;
+                    ns.pieces[piece][1]= j;
+                    //ns.numPlayed++;
+                    byte[] win = bestPiece(agent, ns);
+                    if(win[0] == agent){
+                        byte[] t = {win[0], i, j};
+                        return t;
+                    } else if(tiePossible[0] != 0 && win[0]==0){
+                        tiePossible[0] = 0;
+                        tiePossible[1] = i;
+                        tiePossible[2] = j;
                     }
                 }
             }
@@ -200,22 +196,27 @@ public class RobotMessiah extends QuartoAgent{
         }
         return tiePossible;
     }
+    //0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1 if no piece.
     public byte[] bestPiece(byte agent, state s){
         byte win = win(s);
         byte tiePossible[] = {(byte)(agent*-1),(byte)(agent*-1)}; //opponent wins
-        if(win == 1){
-            return (byte)(win*agent);
-        } else if(win == -1){
-            return 0;
+        if(win == 1){ //prev player has won
+            byte[] t = {(byte)(agent*-1), (byte)-1};
+            return t;
+        } else if(win == -1){ //no win possible
+            byte[] t = {0, (byte)-1};
+            return t;
         } else{
             //for all unplayed pieces, call bestMove with each
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] != -1){
-                    win = bestMove(agent, s, k);
-                    if(win == agent){
-                        return win;
-                    } else if(win==0){
-                        tiePossible = 0;
+                    byte[] win2 = bestMove(agent, s, k);
+                    if(win2[0] == agent){
+                        byte[] t = {win2[0], k};
+                        return t;
+                    } else if(tiePossible[0] != 0 && win2[0]==0){
+                        tiePossible[0] = 0;
+                        tiePossible[1] = k;
                     }
                 }
             }
