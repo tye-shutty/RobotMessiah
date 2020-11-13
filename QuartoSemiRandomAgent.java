@@ -227,5 +227,13 @@ public class QuartoSemiRandomAgent extends QuartoAgent {
 
         return false;
     }
+	//Records the current time in nanoseconds from when this function is called
+	protected void startNanoTimer(){
+		startTime = System.nanoTime();
+	}
 
+	//gets the time difference between now and when startNanoTimer() was last called
+	protected long getNanosecondsFromTimer(){
+		return System.nanoTime() - startTime;
+    }
 }

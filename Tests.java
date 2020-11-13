@@ -1,21 +1,36 @@
 package Quarto;
 import java.util.Scanner;
-import static org.junit.Assert.assertTrue;
+import java.io.File;
+import java.io.FileWriter;
+//import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+//import org.junit.Test;
 
 public class Tests {
   public static void main(String[] args){
-    assertTrue(test2() == 42);
+   //assertTrue(test2() == 42);
+   test3();
   }
-
+/*
   private static int test2(){
     //QuartoBoard qboard = new QuartoBoard(5, 5, 32, "near_win_state_diagonal");
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, "near_win_state_diagonal");
     return rm.heuristic(rm.quartoBoard.board);
+  }*/
+  private static int test3(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, "near_win_state_diagonal");
+    try{
+      FileWriter fw = new FileWriter("test3");
+      fw.write(rm.currState.toString());
+      RobotMessiah.state s = rm.currState.copy();
+      fw.append(s.toString());
+      fw.close();
+    } catch(Exception e){}
+    return 1;
   }
-
+/*
   private static void test1(){
     Common.prn("Test 1");
     GameClient emptyClient = new GameClient();
@@ -45,5 +60,5 @@ public class Tests {
 
     Common.prn(sr.moveSelectionAlgorithm(choice));
     Common.prn("end Test 1");
-  }
+  }*/
 }

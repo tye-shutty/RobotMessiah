@@ -3,30 +3,60 @@
 package Quarto;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.Arrays;
 
 //maybe override choosePieceTurn(), etc to make more usable arrays 
 public class RobotMessiah extends QuartoAgent{
 
-    private class state{
-        //x, then y, then characteristics, -1 for null
-        byte[][][] board = new byte[5][5][5];
-        //first 5 dimensions are characteristics, last is x y coords
-        byte[][][][][][] playedPieces = new byte[2][2][2][2][2][2];
-        byte piecesPlayed = 0;
-    }
-    private state currState = new state();
-
-    public RobotMessiah(GameClient gameClient, String stateFileName){
-        super(gameClient, stateFileName);
-        currState = new state();
-        //empty board
-        for(int i=0;i<5;i++){
-            for(int j=0;j<5;j++){
-                for(int k=0;k<5;k++){
-                    currState.board[i][j][k] = -1;
+    public class state{
+        //x, then y, then characteristics (as a number), -1 for null
+        byte[][] board = new byte[5][5];
+        //first dimensions are characteristics as binary number (0 to 2^5-1), last is x y coords
+        byte[][] pieces = new byte[32][2];
+        //byte numPlayed = 0;
+        //byte[][] charRemain = {{16,16,16,16,16},{16,16,16,16,16}}; //0 is pieces w/ 0, 1 is p w/ 1
+        //chars not played
+        public state(){
+            for(int i=0;i<5;i++){
+                for(int j=0;j<5;j++){
+                    board[i][j]=-1;
                 }
             }
+            for(int i=0; i<32; i++){
+                pieces[i][0]=-1;
+                pieces[i][1]=-1;
+            }
         }
+        public state copy(){
+            state temp = new state();
+            for(byte i=0; i<5;i++){
+                System.arraycopy(board[i], 0, temp.board[i], 0, 5);
+            }
+            for(byte i=0; i<32; i++){
+                System.arraycopy(pieces[i], 0, temp.pieces[i], 0, 2);
+            }
+            //temp.numPlayed = numPlayed;
+            return temp;
+        }
+        public String toString(){
+            String ret = "[ ";
+            for(byte i=0; i<5; i++){
+                if(i!=0){
+                    ret+="  ";
+                }
+                ret+= Arrays.toString(board[i]);
+                if(i!=4){
+                    ret+="\n";
+                }
+            }
+            return ret+"]";
+        }
+    }
+    public state currState = new state();
+
+    public RobotMessiah(GameClient gameClient, String stateFileName){
+        super(gameClient, stateFileName); //does error checks
+        currState = new state();
         
 		if(stateFileName != null){
             try{
@@ -39,23 +69,16 @@ public class RobotMessiah extends QuartoAgent{
                     for(byte col=0; col<5; col++){
     
                         if(!splitted[col].equals("null")){
-                            for(int i=0;i<5;i++){
-                                if(splitted[col].charAt(i) == '0'){
-                                    currState.board[row][col][i] = 0;
+                            currState.board[row][col] = 0; //-1 -> 0
+                            for(byte i=0;i<5;i++){
+
+                                if(splitted[col].charAt(i) == '1'){
+                                    currState.board[row][col] = (byte)(currState.board[row][col] | (1 << i));
                                 }
                             }
-                            currState.playedPieces[currState.board[row][col][0]]
-                            [currState.board[row][col][1]]
-                            [currState.board[row][col][2]]
-                            [currState.board[row][col][3]]
-                            [currState.board[row][col][4]][0] = row;
-                            currState.playedPieces[currState.board[row][col][0]]
-                            [currState.board[row][col][1]]
-                            [currState.board[row][col][2]]
-                            [currState.board[row][col][3]]
-                            [currState.board[row][col][4]][1] = col;
-
-                            currState.piecesPlayed++;
+                            currState.pieces[Integer.parseInt(splitted[col], 2)][0] = row;
+                            currState.pieces[Integer.parseInt(splitted[col], 2)][1] = col;
+                            //currState.numPlayed++;
                         }
                     }
                     row++;
@@ -69,12 +92,9 @@ public class RobotMessiah extends QuartoAgent{
 		}
     }
     public static void main(String[] args){
-        //start the server
         GameClient gameClient = new GameClient();
-
         String ip = null;
         String stateFileName = null;
-        //IP must be specified
         if(args.length > 0){
             ip = args[0];
         } else{
@@ -87,14 +107,13 @@ public class RobotMessiah extends QuartoAgent{
         gameClient.connectToServer(ip, 4321);
         RobotMessiah quartoAgent = new RobotMessiah(gameClient, stateFileName);
         quartoAgent.play();
-
         gameClient.closeConnection();
     }
     @Override
     protected String pieceSelectionAlgorithm(){
-        if(empty(currState)){
+        //if(currState.numPlayed == 0){
             //return random piece
-        }
+        //}
         this.startTimer();
         boolean skip = false;
         for(int i = 0; i < this.quartoBoard.getNumberOfPieces(); i++){
@@ -116,100 +135,182 @@ public class RobotMessiah extends QuartoAgent{
                     if(skip){
                         break;
                     }
-
                 }
                 if(!skip){
                     return String.format("%5s", Integer.toBinaryString(i)).replace(' ', '0');
                 }
-
             }
             if(this.getMillisecondsFromTimer() >(this.timeLimitForResponse - COMMUNICATION_DELAY)){
                 //handle for when we are over some imposed time limit(make sure you account for communication delay)
             }
             String message = null;
         }
-
-
         //if we don't find a piece in the above code just grab the first random piece
         int pieceId = this.quartoBoard.chooseRandomPieceNotPlayed(100);
         String BinaryString = String.format("%5s", Integer.toBinaryString(pieceId)).replace(' ', '0');
 
-
         return BinaryString;
     }
 
-    private int[] pivotLookup(int[][][] board, boolean pivot, int i, int j){
+    private byte pivotLookup(byte[][] board, boolean pivot, byte i, byte j){
         if(pivot){
             return board[j][i];
         }
         return board[i][j];
     }
     //returns -1 for min win, 1 for max win, 0 for tie
-    public int bestMove(int maxAgent, state s){
+    //agent is -1 if min agent, 1 if max
+    public byte bestMove(byte agent, state s, byte piece){
         //for all moves, call bestPiece with each, unless only one move left or won
-        int win = ;
-        if(s.piecesPlayed == 31){
-            
-        } else if(winOpenings(s) == 0){
-            //check if win possible
-            return 0
-        } else if(){
-            //check if won
-
-            return win > 0 ? maxAgent : 0;
+        byte win = win(s);
+        byte tiePossible = (byte)(agent*-1); //opponent wins
+        if(win == 1){
+            return (byte)(win*agent);
+        } else if(win == -1){
+            return 0;
         } else{
-            //copy game state, add piece to each null position
-            
-            //chose best outcome if max, worst if min
-            while(bestPiece(-1*maxAgent)*maxAgent != 1)
-            Boolean result = bestPiece(-1*maxAgent);
-            
-        }
-    }
-    public int bestPiece(int maxAgent, state s){
-        //for all pieces, call bestMove with each
-        //state is 3D vector, where x is x axis, y is y axis, and z is characteristics,
-        //if no piece played, all characteristics will be -1
-        
-    }
-    /**public state initializeState(){
-        state s = new state();
-        for(int i=0; i<5; i++){
-            for(int j=0; j<5; j++){
-                for(int k=0; k<5; k++){
-                    if(this.quartoBoard.board[i][j] != null){
-                        s.board[i][j][k] = this.quartoBoard.board[i][j].getCharacteristicsArray()[k] ? 1 : 0;
-                    } else{
-                        s.board[i][j][k] = -1;
+            //for all moves (null spots), call bestPiece
+            for(byte i=0; i<5;i++){
+                for(byte j=0; j<5; j++){
+
+                    if(s.board[i][j] == -1){
+                        //copy game state, add piece to null position
+                        state ns = s.copy();
+                        ns.board[i][j] = piece;
+                        ns.pieces[piece][0]= i;
+                        ns.pieces[piece][1]= j;
+                        //ns.numPlayed++;
+                        win = bestPiece(agent, ns);
+                        if(win == agent){
+                            return win;
+                        } else if(win==0){
+                            tiePossible = 0;
+                        }
                     }
                 }
-
+            }
+            
+        }
+        return tiePossible;
+    }
+    public byte bestPiece(byte agent, state s){
+        byte win = win(s);
+        byte tiePossible = (byte)(agent*-1); //opponent wins
+        if(win == 1){
+            return (byte)(win*agent);
+        } else if(win == -1){
+            return 0;
+        } else{
+            //for all unplayed pieces, call bestMove with each
+            for(byte k=0; k< 32; k++){
+                if(s.pieces[k][0] != -1){
+                    win = bestMove(agent, s, k);
+                    if(win == agent){
+                        return win;
+                    } else if(win==0){
+                        tiePossible = 0;
+                    }
+                }
             }
         }
-        
-    }**/
-    //in future, consider machine learning to find ideal value for heuristic
-    //returns sum of all win possibilities, ignorant of remaining pieces
+        return tiePossible;
+    }
+    private byte win(state s){
+        //1 for win, 0 for no win, -1 for no possible win
+        //check rows and col
+        byte notPossible = -1;
+        boolean pivot = false;
+        for(byte i=0; i<5; i++){
+            byte[] currChars = {0,0,0,0,0};
+            byte nullCount = 0;
+            for(byte j=0; j<5; j++){
+                if(pivotLookup(s.board, pivot,i,j) == -1){
+                    nullCount++;
+                } else{
+                    byte rc = pivotLookup(s.board, pivot,i,j);
+                    for(byte z=0;z<5;z++){
+                        currChars[4-z] += 1 | (byte)(rc >> z);
+                    }
+                }
+            }
+            if(nullCount == 0){
+                for(byte j=0; j<5; j++){
+                    if(currChars[j] == 0 || currChars[j] == 5){
+                        return 1;
+                    }
+                }
+            }
+            for(byte j=0; j<5; j++){
+                if(currChars[j] == 0 || currChars[j]+nullCount == 5){
+                    notPossible = 0;
+                }
+            }
+            if(i==4 && pivot == false){
+                i=-1;
+                pivot=true;
+            }
+        }
+        //check diagonals
+        for(byte[] i={0,1}; i[1]>-3; i[0]=4, i[1]-=2){
+            byte[] currChars ={0,0,0,0,0};
+            byte nullCount = 0;
+            for(byte j=0; j<5; j++){
+                if(s.board[j][i[0]+i[1]*j] == -1){
+                    nullCount++;
+                } else{
+                    byte rc = s.board[j][i[0]+i[1]*j];
+                    for(byte z=0;z<5;z++){
+                        currChars[z] += rc;
+                    }
+                }
+            }
+            if(nullCount == 0){
+                for(byte j=0; j<5; j++){
+                    if(currChars[j] == 0 || currChars[j] == 5){
+                        return 1;
+                    }
+                }
+            }
+            for(byte j=0; j<5; j++){
+                if(currChars[j] == 0 || currChars[j]+nullCount == 5){
+                    notPossible = 0;
+                }
+            }
+        }
+        return notPossible;
+    }
+    //returns sum of all win possibilities. For every row/col/diag check if 5 matching chars is possible
+    //can consider different rows aside from different chars in same row
+    //counts num pieces that can be used to win?
+    /**
     public int winOpenings(state s){
-        int winPossibilities = 0; //1 possibility for every characteristic quintuple
+        int[] winPossibilities = {0,0,0}; //1 first is all unique, 2 is just separate rows/col/diag
+        //3 is num pieces that can lead to win
         //check rows and columns for win possibility(excludes existing peices)
         boolean pivot = false;
 
-        for(int i=0; i<5; i++){
-            int nullCount = 0;
-            int[] currChars ={0,0,0,0,0};
+        for(byte i=0; i<5; i++){
+            byte nullCount = 0;
+            byte[] currChars = {0,0,0,0,0};
+            byte[][] charWins = {{0,0,0,0,0},{0,0,0,0,0}}; //0 is 0 wins, 1 is 1 wins
+            //for each diff num of null spots, which chars needed to win?
 
-            for(int j=0; j<5; j++){
-                if(pivotLookup(s.board, pivot,i,j)[0] == -1){
+            for(byte j=0; j<5; j++){
+                if(pivotLookup(s.board, pivot,i,j) == -1){
                     nullCount++;
                 } else{
-                    int[] rc = pivotLookup(s.board, pivot,i,j);
-                    for(int z=0;z<5;z++){
-                        currChars[z] += rc[z];
+                    byte rc = pivotLookup(s.board, pivot,i,j);
+                    for(byte z=0;z<5;z++){
+                        currChars[4-z] += 1 | (byte)(rc >> z);
                     }
                 }
             }
             for(int j=0; j<5; j++){
+                for(byte k=0;k<32;k++){
+                    for(byte a=0;a<2;a++){
+                        
+                    }
+                }
                 if(currChars[j] == 0 || currChars[j]+nullCount == 5){
                     winPossibilities++;
                 }
@@ -242,10 +343,10 @@ public class RobotMessiah extends QuartoAgent{
         }
         return winPossibilities;
     }
-    
+     */
     @Override
     protected String moveSelectionAlgorithm(int pieceID){
-
+        /*
         this.startNanoTimer();
         QuartoPiece curr = this.quartoBoard.getPiece(pieceID);
         int[] chars ={0,0,0,0,0};
@@ -314,7 +415,7 @@ public class RobotMessiah extends QuartoAgent{
                     }
                 }
             }
-        }
+        }*/
 
         // If no winning move is found in the above code, then return a random(unoccupied) square
         int[] move = new int[2];
