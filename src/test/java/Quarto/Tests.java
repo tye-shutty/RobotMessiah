@@ -11,6 +11,12 @@ public class Tests {
    //assertTrue(test2() == 42);
    test5();
   }
+  private static int test6(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win1");
+    Common.prn(rm.currState.toString());
+    return 1;
+  }
   private static int test5(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, null);

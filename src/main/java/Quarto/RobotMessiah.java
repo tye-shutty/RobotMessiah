@@ -61,32 +61,23 @@ public class RobotMessiah extends QuartoAgent{
             return s;
         }
         public String toString(){
-            String ret = "[";
+            String ret = "";
             for(byte i=0; i<5; i++){
-                if(i!=0){
-                    ret+=" ";
-                }
-                ret+="[";
                 for (byte j=0; j<5; j++){
                     if(board[i][j] != -1){
                         String st = Integer.toBinaryString(board[i][j]);
                         while(st.length()<5){
                             st="0"+st;
                         }
-                        ret+= String.format("%6s", st);
+                        ret+= st+"\t";
                     }
                     else{
-                        ret+= String.format("%6d", -1);
+                        ret+= "null\t";
                     }
                 }
-                ret+="]";
-                if(i!=4){
-                    ret+="\n";
-                }
+                ret+="\n";
             }
-            ret+="]\n\n";
-
-            ret+="[";
+            ret+="\n[";
             for (byte j=0; j<32; j++){
                 if(pieces[j][0] == -1){
                     String st = Integer.toBinaryString(j);
@@ -239,7 +230,7 @@ public class RobotMessiah extends QuartoAgent{
     //0 is -1 for min win, 1 for max win, 0 for tie
     //agent is -1 if min agent, 1 if max
     //blind because it doesn't return the best move, just if it reaches it or not
-    public byte blindBestMove(byte agent, state s, byte piece){
+    public byte blindBestMove(byte agent, state s, byte piece, int recursion){
         //for all moves, call bestPiece with each, unless only one move left or won
         byte tiePossible = (byte)(agent*-1); //opponent wins
         //for all moves (null spots), call bestPiece
@@ -253,11 +244,15 @@ public class RobotMessiah extends QuartoAgent{
                     ns.pieces[piece][0]= i;
                     ns.pieces[piece][1]= j;
                     //ns.numPlayed++;
-                    byte win = blindBestPiece(agent, ns);
+                    byte win = blindBestPiece(agent, ns, ++recursion);
                     if(win == agent){
+                        Common.prnRed("agent "+agent+" win at move "+i+", "+j+". Recursion="+recursion);
                         return win;
                     } else if(tiePossible != 0 && win==0){
+                        Common.prn("agent "+agent+" found tie at move "+i+", "+j+". Recursion="+recursion);
                         tiePossible = 0;
+                    } else{
+                        Common.prn("agent "+agent+" found nothing at move "+i+", "+j+". Recursion="+recursion);
                     }
                 }
             }
@@ -266,7 +261,7 @@ public class RobotMessiah extends QuartoAgent{
         return tiePossible;
     }
     //0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1 if no piece.
-    public byte[] bestPiece(byte agent, state s){
+    public byte[] bestPiece(byte agent, state s, int recursion){
         byte win = win(s);
         byte tiePossible[] = {(byte)(agent*-1),(byte)(agent*-1)}; //opponent wins
         if(win == 1){ //prev player has won
@@ -279,7 +274,7 @@ public class RobotMessiah extends QuartoAgent{
             //for all unplayed pieces, call bestMove with each
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] != -1){
-                    win = blindBestMove(agent, s, k);
+                    win = blindBestMove(agent, s, k, ++recursion);
                     if(win == agent){
                         byte[] t = {win, k};
                         return t;
@@ -293,22 +288,28 @@ public class RobotMessiah extends QuartoAgent{
         return tiePossible;
     }
     //0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1 if no piece.
-    public byte blindBestPiece(byte agent, state s){
+    public byte blindBestPiece(byte agent, state s, int recursion){
         byte win = win(s);
         byte tiePossible = (byte)(agent*-1); //opponent wins
         if(win == 1){ //prev player has won
+            Common.prnRed("agent "+agent+" lost at recursion="+recursion);
             return (byte)(agent*-1);
         } else if(win == -1){ //no win possible
+            Common.prnRed("agent "+agent+" tied at recursion="+recursion);
             return 0;
         } else{
             //for all unplayed pieces, call bestMove with each
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] != -1){
-                    win = blindBestMove(agent, s, k);
+                    win = blindBestMove(agent, s, k, ++recursion);
                     if(win == agent){
+                        Common.prnRed("agent "+agent+" win at piece "+k+". Recursion="+recursion);
                         return win;
                     } else if(tiePossible != 0 && win==0){
+                        Common.prn("agent "+agent+" found tie at piece "+k+". Recursion="+recursion);
                         tiePossible = 0;
+                    } else{
+                        Common.prn("agent "+agent+" found nothing at piece "+k+". Recursion="+recursion);
                     }
                 }
             }
