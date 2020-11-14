@@ -4,6 +4,7 @@ package Quarto;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Arrays;
+import java.util.Random;
 
 //maybe override choosePieceTurn(), etc to make more usable arrays 
 public class RobotMessiah extends QuartoAgent{
@@ -38,6 +39,27 @@ public class RobotMessiah extends QuartoAgent{
             //temp.numPlayed = numPlayed;
             return temp;
         }
+        public state randState(){
+            state s = new state();
+            Random rand = new Random();
+            //from https://stackoverflow.com/questions/7404666/generating-random-unique-sequences-in-java
+            int[] res = new int[32];
+            for (int i = 0; i < 32; i++) {
+                int d = rand.nextInt(i+1);
+                res[i] = res[d];
+                res[d] = i;
+            }
+            for(byte j=0;j<5;j++){
+                for(byte k=0;k<5;k++){
+                    if(rand.nextInt(3)>0){
+                        s.board[j][k]=(byte)res[j*5+k];
+                        s.pieces[res[j*5+k]][0] = j;
+                        s.pieces[res[j*5+k]][1] = k;
+                    }
+                }
+            }
+            return s;
+        }
         public String toString(){
             String ret = "[";
             for(byte i=0; i<5; i++){
@@ -46,14 +68,32 @@ public class RobotMessiah extends QuartoAgent{
                 }
                 ret+="[";
                 for (byte j=0; j<5; j++){
-                    ret+= String.format("%3d", board[i][j]);
-                    // if(j!=4){
-                    //     ret+=",";
-                    // }
+                    if(board[i][j] != -1){
+                        String st = Integer.toBinaryString(board[i][j]);
+                        while(st.length()<5){
+                            st="0"+st;
+                        }
+                        ret+= String.format("%6s", st);
+                    }
+                    else{
+                        ret+= String.format("%6d", -1);
+                    }
                 }
                 ret+="]";
                 if(i!=4){
                     ret+="\n";
+                }
+            }
+            ret+="]\n\n";
+
+            ret+="[";
+            for (byte j=0; j<32; j++){
+                if(pieces[j][0] == -1){
+                    String st = Integer.toBinaryString(j);
+                    while(st.length()<5){
+                        st="0"+st;
+                    }
+                    ret+= String.format("%6s", st);
                 }
             }
             return ret+"]";
@@ -181,14 +221,43 @@ public class RobotMessiah extends QuartoAgent{
                     ns.pieces[piece][0]= i;
                     ns.pieces[piece][1]= j;
                     //ns.numPlayed++;
-                    byte[] win = bestPiece(agent, ns);
-                    if(win[0] == agent){
-                        byte[] t = {win[0], i, j};
+                    byte win = blindBestPiece(agent, ns);
+                    if(win == agent){
+                        byte[] t = {win, i, j};
                         return t;
-                    } else if(tiePossible[0] != 0 && win[0]==0){
+                    } else if(tiePossible[0] != 0 && win==0){
                         tiePossible[0] = 0;
                         tiePossible[1] = i;
                         tiePossible[2] = j;
+                    }
+                }
+            }
+            
+        }
+        return tiePossible;
+    }
+    //0 is -1 for min win, 1 for max win, 0 for tie
+    //agent is -1 if min agent, 1 if max
+    //blind because it doesn't return the best move, just if it reaches it or not
+    public byte blindBestMove(byte agent, state s, byte piece){
+        //for all moves, call bestPiece with each, unless only one move left or won
+        byte tiePossible = (byte)(agent*-1); //opponent wins
+        //for all moves (null spots), call bestPiece
+        for(byte i=0; i<5;i++){
+            for(byte j=0; j<5; j++){
+
+                if(s.board[i][j] == -1){
+                    //copy game state, add piece to null position
+                    state ns = s.copy();
+                    ns.board[i][j] = piece;
+                    ns.pieces[piece][0]= i;
+                    ns.pieces[piece][1]= j;
+                    //ns.numPlayed++;
+                    byte win = blindBestPiece(agent, ns);
+                    if(win == agent){
+                        return win;
+                    } else if(tiePossible != 0 && win==0){
+                        tiePossible = 0;
                     }
                 }
             }
@@ -210,11 +279,11 @@ public class RobotMessiah extends QuartoAgent{
             //for all unplayed pieces, call bestMove with each
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] != -1){
-                    byte[] win2 = bestMove(agent, s, k);
-                    if(win2[0] == agent){
-                        byte[] t = {win2[0], k};
+                    win = blindBestMove(agent, s, k);
+                    if(win == agent){
+                        byte[] t = {win, k};
                         return t;
-                    } else if(tiePossible[0] != 0 && win2[0]==0){
+                    } else if(tiePossible[0] != 0 && win==0){
                         tiePossible[0] = 0;
                         tiePossible[1] = k;
                     }
@@ -223,7 +292,30 @@ public class RobotMessiah extends QuartoAgent{
         }
         return tiePossible;
     }
-    private byte win(state s){
+    //0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1 if no piece.
+    public byte blindBestPiece(byte agent, state s){
+        byte win = win(s);
+        byte tiePossible = (byte)(agent*-1); //opponent wins
+        if(win == 1){ //prev player has won
+            return (byte)(agent*-1);
+        } else if(win == -1){ //no win possible
+            return 0;
+        } else{
+            //for all unplayed pieces, call bestMove with each
+            for(byte k=0; k< 32; k++){
+                if(s.pieces[k][0] != -1){
+                    win = blindBestMove(agent, s, k);
+                    if(win == agent){
+                        return win;
+                    } else if(tiePossible != 0 && win==0){
+                        tiePossible = 0;
+                    }
+                }
+            }
+        }
+        return tiePossible;
+    }
+    public byte win(state s){
         //1 for win, 0 for no win, -1 for no possible win
         //check rows and col
         byte notPossible = -1;

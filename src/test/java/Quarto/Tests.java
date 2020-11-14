@@ -9,7 +9,15 @@ import java.io.FileWriter;
 public class Tests {
   public static void main(String[] args){
    //assertTrue(test2() == 42);
-   test4();
+   test5();
+  }
+  private static int test5(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    RobotMessiah.state rs = rm.currState.randState();
+    Common.prn(rs.toString());
+    Common.prn(""+rm.win(rs));
+    return 1;
   }
   private static int test4(){
     GameClient gc = new GameClient();
@@ -21,9 +29,7 @@ public class Tests {
     //   fw.append(s.toString());
     //   fw.close();
     // } catch(Exception e){}
-    Common.prn(rm.currState.toString());
-    RobotMessiah.state s = rm.currState.copy();
-    Common.prn(s.toString());
+    rm.bestPiece((byte)1, rm.currState);
     return 1;
   }
 /*
