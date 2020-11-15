@@ -1,5 +1,6 @@
 package Quarto;
 //Author: Tye Shutty
+import java.io.FileWriter;
 public class Common {
 
   public static String red = "\u001B[31m";
@@ -14,4 +15,27 @@ public class Common {
   public static void pr(String s){
     System.out.print(s);
   }
+  public static void out(String file, String content, int append){
+    try{
+      FileWriter fw = new FileWriter("test3");
+      if(append==1){
+        fw.append(content);
+      } else{
+        fw.write(content);
+      }
+      fw.close();
+    } catch(Exception e){
+      System.out.println(e);
+    }
+  }
+  //Records the current time in nanoseconds from when this function is called
+  static long startTime;
+	public static void startNanoTimer(){
+		startTime = System.nanoTime();
+	}
+
+	//gets the time difference between now and when startNanoTimer() was last called
+	public static long getNanosecondsFromTimer(){
+		return System.nanoTime() - startTime;
+    }
 }

@@ -2,18 +2,41 @@ package Quarto;
 import java.util.Scanner;
 import java.io.File;
 import java.io.FileWriter;
+import java.util.Arrays;
 //import static org.junit.Assert.assertTrue;
 
 //import org.junit.Test;
 
 public class Tests {
+  /*
+  java -classpath "/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/test-classes:/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/classes" Quarto.Tests
+  */
   public static void main(String[] args){
    //assertTrue(test2() == 42);
-   test5();
+   Common.startNanoTimer();
+   test8();
+   Common.prn(""+Common.getNanosecondsFromTimer());
+  }
+  private static void test9(){
+    for(int i=0;i<1000;i++){
+     test8();
+    }
+  }
+  private static int test8(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    Common.prn(""+rm.blindRandPiece((byte)1, rm.currState, 0));
+    return 1;
+  }
+  private static int test7(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4_closer2");
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0)));
+    return 1;
   }
   private static int test6(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win1");
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4");
     Common.prn(rm.currState.toString());
     return 1;
   }
@@ -25,6 +48,7 @@ public class Tests {
     Common.prn(""+rm.win(rs));
     return 1;
   }
+  /*
   private static int test4(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, null);
@@ -37,7 +61,7 @@ public class Tests {
     // } catch(Exception e){}
     rm.bestPiece((byte)1, rm.currState);
     return 1;
-  }
+  }*/
 /*
   private static int test2(){
     //QuartoBoard qboard = new QuartoBoard(5, 5, 32, "near_win_state_diagonal");
