@@ -38,4 +38,10 @@ public class Common {
 	public static long getNanosecondsFromTimer(){
 		return System.nanoTime() - startTime;
     }
+  public static byte pivotLookup(byte[][] board, boolean pivot, byte i, byte j){
+      if(pivot){
+          return board[j][i];
+      }
+      return board[i][j];
+  }
 }

@@ -25,7 +25,7 @@ public class Tests {
   private static int test8(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, null);
-    Common.prn(""+rm.blindRandPiece((byte)1, rm.currState, 0));
+    Common.prn(""+rm.heurRandPiece((byte)1, rm.currState, 0));
     return 1;
   }
   private static int test7(){
