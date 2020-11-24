@@ -2,7 +2,8 @@
 package Quarto;
 
 import java.util.Random;
-public class state{
+public class State{
+    Random rand = new Random();
     //x, then y, then characteristics (as a number), -1 for null
     byte[][] board = new byte[5][5];
     //first dimensions are characteristics as binary number (0 to 2^5-1), last is x y coords
@@ -10,7 +11,7 @@ public class state{
     //byte numPlayed = 0;
     //byte[][] charRemain = {{16,16,16,16,16},{16,16,16,16,16}}; //0 is pieces w/ 0, 1 is p w/ 1
     //chars not played
-    public state(){
+    public State(){
         for(int i=0;i<5;i++){
             for(int j=0;j<5;j++){
                 board[i][j]=-1;
@@ -21,8 +22,8 @@ public class state{
             pieces[i][1]=-1;
         }
     }
-    public state copy(){
-        state temp = new state();
+    public State copy(){
+        State temp = new State();
         for(byte i=0; i<5;i++){
             System.arraycopy(board[i], 0, temp.board[i], 0, 5);
         }
@@ -32,9 +33,8 @@ public class state{
         //temp.numPlayed = numPlayed;
         return temp;
     }
-    public state randState(){
-        state s = new state();
-        Random rand = new Random();
+    public State randState(){
+        State s = new State();
         
         int[] res = randPieces();
         for(byte j=0;j<5;j++){
@@ -51,7 +51,6 @@ public class state{
     //from https://stackoverflow.com/questions/7404666/generating-random-unique-sequences-in-java
     public int[] randPieces(){
         int[] res = new int[32];
-        Random rand = new Random();
         for (int i = 0; i < 32; i++) {
             int d = rand.nextInt(i+1);
             res[i] = res[d];
@@ -61,7 +60,6 @@ public class state{
     }
     public int[] randMoves(){ 
         int[] res2 = new int[25];
-        Random rand = new Random();  //move out in future--test effect
         for (int i = 0; i < 25; i++) {
             int d = rand.nextInt(i+1);
             res2[i] = res2[d];

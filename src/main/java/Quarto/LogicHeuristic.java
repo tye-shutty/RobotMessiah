@@ -2,18 +2,20 @@ package Quarto;
 
 public class LogicHeuristic extends Heuristic{
     
-    public byte win(state s){
+    public byte win(State s){
         //1 for win, 0 for no win, -1 for no possible win, -2 for next player always wins
         //logically assesses the current state for win conditions
-
-        byte[][][] wins = new byte[5][5][5]; //0= char has no wins, 1= 1 has win, 2 =0 has win
+        byte[][] wins = new byte[2][5]; //0= char has no wins, 1= 1 has win, represents winning
+        //chars, first row is 0s, 2nd is 1s
         byte nextWin = 0;
         byte notPossible = -1;
         boolean pivot = false;
+
         for(byte i=0; i<5; i++){
             byte[] currChars = {0,0,0,0,0};
             byte nullCount = 0;
             byte nullPos = -1;
+            //fill up currChars array
             for(byte j=0; j<5; j++){
                 byte rc = Common.pivotLookup(s.board, pivot,i,j);
                 if(rc == -1){
@@ -25,28 +27,27 @@ public class LogicHeuristic extends Heuristic{
                     }
                 }
             }
+            //check for immediate win
             if(nullCount == 0){
                 for(byte j=0; j<5; j++){
                     if(currChars[j] == 0 || currChars[j] == 5){
                         return 1;
                     }
                 }
+            //check if next player wins
             } else if(nextWin != -2 && nullCount==1){
-                //add to wins
-                byte x=pivot?nullPos:i;
-                byte y=pivot?i:nullPos;
                 for(byte j=0;j<5;j++){
-                    if(currChars[j]==4){
-                        if(wins[x][y][j]== 2){
+                    if(currChars[j]==4){ //1s will win
+                        if(wins[0][j]> 0){ //0s also win
                             nextWin = -2;
                         }else{
-                            wins[x][y][j]= 1;
+                            wins[1][j]++; //1s will win
                         }
-                    } else if(currChars[j]==0){
-                        if(wins[x][y][j]== 1){
+                    } else if(currChars[j]==0){ //0s will win
+                        if(wins[1][j]> 0){ //1s also win
                             nextWin = -2;
                         } else{
-                            wins[x][y][j]=2;
+                            wins[0][j]++;
                         }
                     }
                 }
@@ -92,19 +93,18 @@ public class LogicHeuristic extends Heuristic{
                     }
                 }
             } else if(nextWin != -2 && nullCount==1){
-                //add to wins
-                for(int j=0;j<5;j++){
-                    if(currChars[j]==4){
-                        if(wins[nullPos][i[0]+i[1]*nullPos][j]== 2){
+                for(byte j=0;j<5;j++){
+                    if(currChars[j]==4){ //1s will win
+                        if(wins[0][j]> 0){ //0s also win
                             nextWin = -2;
-                        } else{
-                            wins[nullPos][i[0]+i[1]*nullPos][j]= 1;
+                        }else{
+                            wins[1][j]++; //1s will win
                         }
-                    } else if(currChars[j]==0){
-                        if(wins[nullPos][i[0]+i[1]*nullPos][j]== 1){
+                    } else if(currChars[j]==0){ //0s will win
+                        if(wins[1][j]> 0){ //1s also win
                             nextWin = -2;
                         } else{
-                            wins[nullPos][i[0]+i[1]*nullPos][j]=2;
+                            wins[0][j]++;
                         }
                     }
                 }

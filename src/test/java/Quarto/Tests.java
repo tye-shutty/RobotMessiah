@@ -14,13 +14,29 @@ public class Tests {
   public static void main(String[] args){
    //assertTrue(test2() == 42);
    Common.startNanoTimer();
-   test8();
-   Common.prn(""+Common.getNanosecondsFromTimer());
+   test9();
+   Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+  }
+  private static void test10(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/pieceagentlost2-0&1samechar");
+    Common.prn(""+rm.h.win(rm.currState));
   }
   private static void test9(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    int[] results = new int[3];
     for(int i=0;i<1000;i++){
-     test8();
+     int res = rm.heurRandPiece((byte)1, rm.currState, 0);
+     if (res==0){
+       results[2]++;
+     } else if(res==1){
+       results[0]++;
+     } else if (res==-1){
+       results[1]++;
+     }
     }
+    Common.prnRed(""+Arrays.toString(results));
   }
   private static int test8(){
     GameClient gc = new GameClient();
@@ -40,14 +56,14 @@ public class Tests {
     Common.prn(rm.currState.toString());
     return 1;
   }
-  private static int test5(){
-    GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
-    RobotMessiah.state rs = rm.currState.randState();
-    Common.prn(rs.toString());
-    Common.prn(""+rm.win(rs));
-    return 1;
-  }
+  // private static int test5(){
+  //   GameClient gc = new GameClient();
+  //   RobotMessiah rm = new RobotMessiah(gc, null);
+  //   State rs = rm.currState.randState();
+  //   Common.prn(rs.toString());
+  //   Common.prn(""+rm.win(rs));
+  //   return 1;
+  // }
   /*
   private static int test4(){
     GameClient gc = new GameClient();
@@ -69,21 +85,21 @@ public class Tests {
     RobotMessiah rm = new RobotMessiah(gc, "near_win_state_diagonal");
     return rm.heuristic(rm.quartoBoard.board);
   }*/
-  private static int test3(){
-    GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/near_win_state_diagonal");
-    // try{
-    //   FileWriter fw = new FileWriter("test3");
-    //   fw.write(rm.currState.toString());
-    //   RobotMessiah.state s = rm.currState.copy();
-    //   fw.append(s.toString());
-    //   fw.close();
-    // } catch(Exception e){}
-    Common.prn(rm.currState.toString());
-    RobotMessiah.state s = rm.currState.copy();
-    Common.prn(s.toString());
-    return 1;
-  }
+  // private static int test3(){
+  //   GameClient gc = new GameClient();
+  //   RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/near_win_state_diagonal");
+  //   // try{
+  //   //   FileWriter fw = new FileWriter("test3");
+  //   //   fw.write(rm.currState.toString());
+  //   //   RobotMessiah.state s = rm.currState.copy();
+  //   //   fw.append(s.toString());
+  //   //   fw.close();
+  //   // } catch(Exception e){}
+  //   Common.prn(rm.currState.toString());
+  //   RobotMessiah.state s = rm.currState.copy();
+  //   Common.prn(s.toString());
+  //   return 1;
+  // }
 /*
   private static void test1(){
     Common.prn("Test 1");
