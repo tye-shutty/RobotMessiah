@@ -4,6 +4,7 @@ import java.io.FileWriter;
 public class Common {
 
   public static String red = "\u001B[31m";
+  public static String yellow = "\u001B[33m";
   public static String white = "\u001B[37m";
 
   public static void prn(String s){
@@ -11,6 +12,9 @@ public class Common {
   }
   public static void prnRed(String s){
     System.out.println(red+s+white);
+  }
+  public static void prnYel(String s){
+    System.out.println(yellow+s+white);
   }
   public static void pr(String s){
     System.out.print(s);

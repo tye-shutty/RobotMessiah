@@ -14,7 +14,7 @@ public class Tests {
   public static void main(String[] args){
    //assertTrue(test2() == 42);
    Common.startNanoTimer();
-   test9();
+   test7();
    Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
   }
   private static void test10(){
@@ -47,7 +47,7 @@ public class Tests {
   private static int test7(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4_closer2");
-    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0)));
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 3)));
     return 1;
   }
   private static int test6(){
