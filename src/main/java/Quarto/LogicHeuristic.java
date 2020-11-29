@@ -2,7 +2,7 @@ package Quarto;
 
 public class LogicHeuristic extends Heuristic{
     
-    public byte win(State s){
+    public byte win(GState s){
         //1 for win, 0 for no win, -1 for no possible win, -2 for next player always wins
         //logically assesses the current state for win conditions
         byte[][] wins = new byte[2][5]; //0= char has no wins, 1= 1 has win, represents winning

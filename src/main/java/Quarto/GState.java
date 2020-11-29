@@ -2,7 +2,7 @@
 package Quarto;
 
 import java.util.Random;
-public class State{
+public class GState{
     Random rand = new Random();
     //x, then y, then characteristics (as a number), -1 for null
     byte[][] board = new byte[5][5];
@@ -11,7 +11,7 @@ public class State{
     //byte numPlayed = 0;
     //byte[][] charRemain = {{16,16,16,16,16},{16,16,16,16,16}}; //0 is pieces w/ 0, 1 is p w/ 1
     //chars not played
-    public State(){
+    public GState(){
         for(int i=0;i<5;i++){
             for(int j=0;j<5;j++){
                 board[i][j]=-1;
@@ -22,8 +22,8 @@ public class State{
             pieces[i][1]=-1;
         }
     }
-    public State copy(){
-        State temp = new State();
+    public GState copy(){
+        GState temp = new GState();
         for(byte i=0; i<5;i++){
             System.arraycopy(board[i], 0, temp.board[i], 0, 5);
         }
@@ -33,8 +33,8 @@ public class State{
         //temp.numPlayed = numPlayed;
         return temp;
     }
-    public State randState(){
-        State s = new State();
+    public GState randState(){
+        GState s = new GState();
         
         int[] res = randPieces();
         for(byte j=0;j<5;j++){

@@ -11,11 +11,26 @@ public class Tests {
   /*
   java -classpath "/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/test-classes:/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/classes" Quarto.Tests
   */
-  public static void main(String[] args){
+  public static void main(String[] args) throws InterruptedException {
    //assertTrue(test2() == 42);
    Common.startNanoTimer();
-   test7();
+   test11();
    Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+  }
+  private static int testLogicHeur(){
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/moveagentloseswithpiece2");
+    Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
+    +rm.h.win(rm.currState));
+    return 1;
+  }
+  private static int test11() throws InterruptedException {
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
+    Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
+    +rm.h.win(rm.currState));
+    return 1;
   }
   private static void test10(){
     GameClient gc = new GameClient();
@@ -27,7 +42,7 @@ public class Tests {
     RobotMessiah rm = new RobotMessiah(gc, null);
     int[] results = new int[3];
     for(int i=0;i<1000;i++){
-     int res = rm.heurRandPiece((byte)1, rm.currState, 0);
+     int res = rm.heurRandPiece((byte)1, rm.currState, 0, false);
      if (res==0){
        results[2]++;
      } else if(res==1){
@@ -41,13 +56,15 @@ public class Tests {
   private static int test8(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, null);
-    Common.prn(""+rm.heurRandPiece((byte)1, rm.currState, 0));
+    Common.prn(""+rm.heurRandPiece((byte)1, rm.currState, 0, false));
     return 1;
   }
-  private static int test7(){
+  private static int test7() throws InterruptedException {
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4_closer2");
-    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 3)));
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 3, false)));
+    Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
+    +rm.h.win(rm.currState));
     return 1;
   }
   private static int test6(){
@@ -59,7 +76,7 @@ public class Tests {
   // private static int test5(){
   //   GameClient gc = new GameClient();
   //   RobotMessiah rm = new RobotMessiah(gc, null);
-  //   State rs = rm.currState.randState();
+  //   GState rs = rm.currState.randState();
   //   Common.prn(rs.toString());
   //   Common.prn(""+rm.win(rs));
   //   return 1;

@@ -8,14 +8,15 @@ import java.util.Random;
 //maybe override choosePieceTurn(), etc to make more usable arrays 
 public class RobotMessiah extends QuartoAgent{
 
-    public State currState = new State();
+    public GState currState = new GState();
     //variable to test different heuristics
     public Heuristic h = new LogicHeuristic();
     public LogicHeuristic lh = new LogicHeuristic();
+    public final int MC_LIMIT = 3;
 
     public RobotMessiah(GameClient gameClient, String stateFileName){
         super(gameClient, stateFileName); //does error checks
-        currState = new State();
+        currState = new GState();
         
 		if(stateFileName != null){
             try{
@@ -113,35 +114,53 @@ public class RobotMessiah extends QuartoAgent{
 
     //0 is min wins=-1, tie=0, max wins=1; 1&2 are move coords resulting in best outcome, -1 if no move.
     //agent is -1 if min agent, 1 if max
-    public byte[] bestMove(byte agent, State s, byte piece, int recursion, int limit){
+    public float[] bestMove(byte agent, GState s, byte piece, int recursion, int limit, boolean debug)
+            throws InterruptedException {
         //for all moves, call bestPiece with each, unless only one move left or won
-        byte tiePossible[] = {(byte)(agent*-1),-1,-1}; //opponent wins
+        float nextBest[] = {-2,-1, -1}; //pos 0 is best MC or tie
         //for all moves (null spots), call bestPiece
         for(byte i=0; i<5;i++){
             for(byte j=0; j<5; j++){
 
                 if(s.board[i][j] == -1){
                     //copy game state, add piece to null position
-                    State ns = s.copy();
+                    GState ns = s.copy();
                     ns.board[i][j] = piece;
                     ns.pieces[piece][0]= i;
                     ns.pieces[piece][1]= j;
 
-                    byte win;
-                    if(recursion>limit){
-                        win = heurRandPiece(agent, ns, recursion+1);
+                    float win =0;
+                    if(recursion>=limit){
+                        AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
+                        for(int k=0; k<MC_LIMIT-1; k++){
+                            //RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
+                            t[k] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
+                            new Thread(t[k]).start();
+                            //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+                        }
+                        t[MC_LIMIT-1] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
+                        t[MC_LIMIT-1].run(); //give main thread something to do
+                        win = t[MC_LIMIT-1].win;
+
+                        for(int k=0; k<MC_LIMIT-1; k++){
+                            t[k].join();
+                            Common.prn("thread="+t[k].win);
+                            win+=t[k].win;
+                        }
+                        win /= MC_LIMIT;
                     } else{
-                        win = bestPiece(agent, ns, 1+recursion, limit)[0]; //agent doesn't change
+                        win = bestPiece(agent, ns, 1+recursion, limit, debug)[0]; //agent doesn't change
                     }
+                    //Common.prn("piece="+piece+"; move="+i+","+j+"="+win);
                     if(win == agent){
                         //Common.prnRed("agent "+agent+" win at move "+i+", "+j+". Recursion="+recursion);
-                        byte[] t = {win, i, j};
+                        float[] t = {win, i, j};
                         return t;
-                    } else if(tiePossible[0] != 0 && win==0){
+                    } else if(nextBest[0] < win*agent){
                         //Common.prn("agent "+agent+" found tie at move "+i+", "+j+". Recursion="+recursion);
-                        tiePossible[0] = 0;
-                        tiePossible[1] = i;
-                        tiePossible[2] = j;
+                        nextBest[0] = win;
+                        nextBest[1] = i;
+                        nextBest[2] = j;
                     } else{
                         //Common.prn("agent "+agent+" found nothing at move "+i+", "+j+". Recursion="+recursion);
                     }
@@ -149,52 +168,77 @@ public class RobotMessiah extends QuartoAgent{
             }
             
         }
-        return tiePossible;
+        nextBest[0] *= agent;
+        return nextBest;
     }
     //0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1 if no piece.
-    public byte[] bestPiece(byte agent, State s, int recursion, int limit){
-        byte win = lh.win(s);
-        byte tiePossible[] = {(byte)(agent*-1),-1}; //opponent wins
+    //float values between -1 and 1 represent value of monte carlo
+    public float[] bestPiece(byte agent, GState s, int recursion, int limit, boolean debug)
+            throws InterruptedException {
+        float win = lh.win(s);
+        float nextBest[] = {-2,-1}; //pos 0 is best MC or tie
         if(win == 1){ //prev player has won
-            Common.prnRed("agent "+agent+" lost at recursion="+recursion);
-            byte[] t = {(byte)(agent*-1), (byte)-1};
+            if(debug)
+                Common.prnRed("agent "+agent+" lost at recursion="+recursion);
+            float[] t = {(byte)(agent*-1), (byte)-1};
             return t;
         } else if(win == -1){ //no win possible
-            Common.prnRed("agent "+agent+" tied at recursion="+recursion);
-            byte[] t = {0, (byte)-1};
+            if (debug)
+                Common.prnRed("agent "+agent+" tied at recursion="+recursion);
+            float[] t = {0, (byte)-1};
             return t;
         } else if(win == -2){ //loss inescapable
-            Common.prnRed("agent "+agent+" will lose at recursion="+recursion);
-            byte[] t = {(byte)(agent*-1), (byte)-1};
+            if (debug)
+                Common.prnRed("agent "+agent+" will lose at recursion="+recursion);
+            float[] t = {(byte)(agent*-1), (byte)-1};
             return t;
         } else{
             //for all unplayed pieces, call bestMove with each
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] == -1){
-                    if(recursion>limit){
-                        win = heurRandMove((byte)(-1*agent), s, k, recursion+1);
+                    if(recursion>=limit){
+                        win = 0;
+                        // for(int i=0; i<MC_LIMIT; i++){
+                        //     win += heurRandMove((byte)(-1*agent), s, k, recursion+1, debug);
+                        // }
+                        AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
+                        for(int x=0; x<MC_LIMIT-1; x++){
+                            t[x] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
+                            new Thread(t[x]).start();
+                            //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+                        }
+                        t[MC_LIMIT-1] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
+                        t[MC_LIMIT-1].run(); //give main thread something to do
+                        win = t[MC_LIMIT-1].win;
+                        for(int x=0; x<MC_LIMIT-1; x++){
+                            t[x].join();
+                            Common.prn("thread="+t[x].win);
+                            win+=t[x].win;
+                        }
+                        win /= MC_LIMIT;
                     } else{
-                        win = bestMove((byte)(-1*agent), s, k, 1+recursion, limit)[0];
+                        win = bestMove((byte)(-1*agent), s, k, 1+recursion, limit, debug)[0];
                     }
                     if(win == agent){
                         //Common.prnRed("agent "+agent+" win at piece "+k+". Recursion="+recursion);
-                        byte[] t = {win, k};
+                        float[] t = {win, k};
                         return t;
-                    } else if(tiePossible[0] != 0 && win==0){
+                    } else if(win*agent>nextBest[0]){
                         //Common.prn("agent "+agent+" found tie at piece "+k+". Recursion="+recursion);
-                        tiePossible[0] = 0;
-                        tiePossible[1] = k;
+                        nextBest[0] = win;
+                        nextBest[1] = k;
                     } else{
                         //Common.prn("agent "+agent+" found nothing at piece "+k+". Recursion="+recursion);
                     }
                 }
             }
         }
-        return tiePossible;
+        nextBest[0] *= agent;
+        return nextBest;
     }
-    //min wins=-1, tie=0, max wins=1
+    //returns: min wins=-1, tie=0, max wins=1
     //attempts to avoid immediate loss using win()
-    public byte heurRandPiece(byte agent, State s, int recursion){
+    public byte heurRandPiece(byte agent, GState s, int recursion, boolean debug){
         //shuffle all pieces
         int[] res = s.randPieces();
         byte bestPieceOutcome = -1; //opp wins; 0 forced tie, 1 neutral, 2 next maybe wins
@@ -213,7 +257,7 @@ public class RobotMessiah extends QuartoAgent{
                     for(byte j=0; j<5 & !exitMove; j++){
                         //if empty, call heuristic on state with piece inserted
                         if(s.board[res2[i*5+j]/5][res2[i*5+j]%5] == -1){
-                            State ns = s.copy();
+                            GState ns = s.copy();
                             ns.board[res2[i*5+j]/5][res2[i*5+j]%5] = (byte)res[k];
                             ns.pieces[res[k]][0]= (byte)(res2[i*5+j]/5);
                             ns.pieces[res[k]][1]= (byte)(res2[i*5+j]%5);
@@ -247,24 +291,28 @@ public class RobotMessiah extends QuartoAgent{
             }
         }
         if(bestPieceOutcome == -1){
-            Common.prnYel("piece agent "+agent+" lost at recursion "+recursion);
-            Common.prn("piece "+bestPiece);
-            Common.prn(s.toString());
+            if(debug){
+                Common.prnYel("piece agent "+agent+" lost at recursion "+recursion);
+                Common.prn("piece "+bestPiece);
+                Common.prn(s.toString());
+            }
             return (byte)(agent*-1);
         } else if(bestPieceOutcome==0){
-            Common.prnYel("piece agents tied at recursion "+recursion);
-            Common.prn("piece "+bestPiece);
-            Common.prn(s.toString());
+            if (debug){
+                Common.prnYel("piece agents tied at recursion "+recursion);
+                Common.prn("piece "+bestPiece);
+                Common.prn(s.toString());
+            }
             return 0;
         } else{
-            return heurRandMove((byte)(-1*agent), s, bestPiece, 1+recursion);
+            return heurRandMove((byte)(-1*agent), s, bestPiece, 1+recursion, debug);
         }
     }
-    public byte heurRandMove(byte agent, State s, byte piece, int recursion){
+    public byte heurRandMove(byte agent, GState s, byte piece, int recursion, boolean debug){
         //for all moves, call bestPiece with each, unless only one move left or won
         int[] res = s.randMoves();
         byte bestMoveOutcome = -1; //-1 opp wins; 0 forced tie, 1 neutral, 2 I win
-        State bestMove = new State();
+        GState bestMove = s.copy();
         int bestMovePos = 0;
         boolean exitMove = false;
         for(byte i=0; i<5 & !exitMove;i++){
@@ -272,7 +320,7 @@ public class RobotMessiah extends QuartoAgent{
 
                 if(s.board[res[i*5+j]/5][res[i*5+j]%5] == -1){
                     //copy game state, add piece to null position
-                    State ns = s.copy();
+                    GState ns = s.copy();
                     ns.board[res[i*5+j]/5][res[i*5+j]%5] = piece;
                     ns.pieces[piece][0]= (byte)(res[i*5+j]/5);
                     ns.pieces[piece][1]= (byte)(res[i*5+j]%5);
@@ -298,17 +346,21 @@ public class RobotMessiah extends QuartoAgent{
             }
         }
         if(bestMoveOutcome == -1){
-            Common.prnRed("move agent "+agent+" lost at recursion "+recursion);
-            Common.prn("move "+bestMovePos/5+", "+bestMovePos%5);
-            Common.prn(bestMove.toString());
+            if(debug){
+                Common.prnRed("move agent "+agent+" lost at recursion "+recursion);
+                Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                Common.prn(bestMove.toString());
+            }
             return (byte)(agent*-1);
         } else if(bestMoveOutcome==0){
-            Common.prnRed("move agents tied at recursion "+recursion);
-            Common.prn("move "+bestMovePos/5+", "+bestMovePos%5);
-            Common.prn(bestMove.toString());
+            if (debug){
+                Common.prnRed("move agents tied at recursion "+recursion);
+                Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                Common.prn(bestMove.toString());
+            }
             return 0;
         } else{
-            return heurRandPiece(agent, bestMove, 1+recursion);
+            return heurRandPiece(agent, bestMove, 1+recursion, debug);
         }
     }
     //returns sum of all win possibilities. For every row/col/diag check if 5 matching chars is possible
