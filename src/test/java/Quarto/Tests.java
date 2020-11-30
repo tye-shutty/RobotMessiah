@@ -17,6 +17,39 @@ public class Tests {
    test11();
    Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
   }
+  private static int test12() throws InterruptedException {
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    //Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
+    //Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
+    //+rm.h.win(rm.currState));
+    int MC_LIMIT = 4;
+    byte agent = 1;
+
+    AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
+    for(int k=0; k<3; k++){
+        //RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
+        t[k] = new AsyncSearch(rm, false, agent, rm.currState, (byte)0, 0, false);
+        new Thread(t[k]).start();
+        //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+    }
+    // AsyncSearch t = new AsyncSearch(rm, false, agent, rm.currState, (byte)0, 0, false);
+    //new Thread(t).start();
+    t[MC_LIMIT-1] = new AsyncSearch(rm, false, agent, rm.currState, (byte)0, 0, false);
+    t[MC_LIMIT-1].run(); //give main thread something to do
+    float win = t[MC_LIMIT-1].getWin();
+    //int win=0;
+    //t.join();
+    //Common.prn("thread="+t.win);
+    //win+=t.win;
+    for(int k=0; k<3; k++){
+        t[k].join();
+        Common.prn("thread="+t[k].getWin());
+        win+=t[k].win;
+    }
+    Common.prn("thread="+t[3].getWin());
+    return 1;
+  }
   private static int testLogicHeur(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/moveagentloseswithpiece2");
@@ -30,6 +63,7 @@ public class Tests {
     Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
+    Common.prn("counter="+rm.counter);
     return 1;
   }
   private static void test10(){

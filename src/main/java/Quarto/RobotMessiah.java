@@ -12,7 +12,7 @@ public class RobotMessiah extends QuartoAgent{
     //variable to test different heuristics
     public Heuristic h = new LogicHeuristic();
     public LogicHeuristic lh = new LogicHeuristic();
-    public final int MC_LIMIT = 3;
+    public final int MC_LIMIT = 4;
 
     public RobotMessiah(GameClient gameClient, String stateFileName){
         super(gameClient, stateFileName); //does error checks
@@ -111,6 +111,13 @@ public class RobotMessiah extends QuartoAgent{
 
         return BinaryString;
     }
+    private final Object lock = new Object();
+    int counter=0;
+    public int incCount(){
+        synchronized (lock) {
+            return ++counter;
+        }
+    }
 
     //0 is min wins=-1, tie=0, max wins=1; 1&2 are move coords resulting in best outcome, -1 if no move.
     //agent is -1 if min agent, 1 if max
@@ -131,29 +138,34 @@ public class RobotMessiah extends QuartoAgent{
 
                     float win =0;
                     if(recursion>=limit){
-                        AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
-                        for(int k=0; k<MC_LIMIT-1; k++){
-                            //RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
-                            t[k] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
-                            new Thread(t[k]).start();
-                            //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+                        for(int k=0; k<MC_LIMIT; k++){
+                            win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+                            counter++;
+                            //Common.prn("finished, win="+win);
                         }
-                        t[MC_LIMIT-1] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
-                        t[MC_LIMIT-1].run(); //give main thread something to do
-                        win = t[MC_LIMIT-1].win;
+                        // AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
+                        // for(int k=0; k<MC_LIMIT-1; k++){
+                        //     //RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
+                        //     t[k] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
+                        //     t[k].run();
+                        //     //new Thread(t[k]).start();
+                        // }
+                        // t[MC_LIMIT-1] = new AsyncSearch(this, false, agent, ns, (byte)0, recursion, debug);
+                        // t[MC_LIMIT-1].run(); //give main thread something to do
+                        // win = t[MC_LIMIT-1].win;
 
-                        for(int k=0; k<MC_LIMIT-1; k++){
-                            t[k].join();
-                            Common.prn("thread="+t[k].win);
-                            win+=t[k].win;
-                        }
+                        // for(int k=0; k<MC_LIMIT-1; k++){
+                        //     //t[k].join();
+                        //     //Common.prn("thread="+t[k].getWin());
+                        //     win+=t[k].getWin();
+                        // }
                         win /= MC_LIMIT;
                     } else{
                         win = bestPiece(agent, ns, 1+recursion, limit, debug)[0]; //agent doesn't change
                     }
                     //Common.prn("piece="+piece+"; move="+i+","+j+"="+win);
                     if(win == agent){
-                        //Common.prnRed("agent "+agent+" win at move "+i+", "+j+". Recursion="+recursion);
+                        Common.prnRed("agent "+agent+" win at move "+i+", "+j+". Recursion="+recursion);
                         float[] t = {win, i, j};
                         return t;
                     } else if(nextBest[0] < win*agent){
@@ -198,23 +210,25 @@ public class RobotMessiah extends QuartoAgent{
                 if(s.pieces[k][0] == -1){
                     if(recursion>=limit){
                         win = 0;
-                        // for(int i=0; i<MC_LIMIT; i++){
-                        //     win += heurRandMove((byte)(-1*agent), s, k, recursion+1, debug);
+                        for(int i=0; i<MC_LIMIT; i++){
+                            win += heurRandMove((byte)(-1*agent), s, k, recursion+1, debug);
+                            //Common.prn("finished, win="+win);
+                        }
+                        // AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
+                        // for(int x=0; x<MC_LIMIT-1; x++){
+                        //     t[x] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
+                        //     //new Thread(t[x]).start();
+                        //     t[x].run();
+                        //     //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
                         // }
-                        AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
-                        for(int x=0; x<MC_LIMIT-1; x++){
-                            t[x] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
-                            new Thread(t[x]).start();
-                            //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
-                        }
-                        t[MC_LIMIT-1] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
-                        t[MC_LIMIT-1].run(); //give main thread something to do
-                        win = t[MC_LIMIT-1].win;
-                        for(int x=0; x<MC_LIMIT-1; x++){
-                            t[x].join();
-                            Common.prn("thread="+t[x].win);
-                            win+=t[x].win;
-                        }
+                        // t[MC_LIMIT-1] = new AsyncSearch(this, true, agent, s, (byte)k, recursion, debug);
+                        // t[MC_LIMIT-1].run(); //give main thread something to do
+                        // win = t[MC_LIMIT-1].win;
+                        // for(int x=0; x<MC_LIMIT-1; x++){
+                        //     //t[x].join();
+                        //     Common.prn("thread="+t[x].getWin());
+                        //     win+=t[x].getWin();
+                        // }
                         win /= MC_LIMIT;
                     } else{
                         win = bestMove((byte)(-1*agent), s, k, 1+recursion, limit, debug)[0];

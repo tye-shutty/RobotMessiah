@@ -1,17 +1,28 @@
 package Quarto;
 
 public class AsyncSearch extends Thread{
-    ThreadLocal<RobotMessiah> rm;
-    float win = -2;
+    RobotMessiah rm;
+    boolean debug;
+    boolean pieceAgent;
     byte agent;
     GState ns;
     byte piece;
     int recursion;
-    boolean debug;
-    boolean pieceAgent;
+    float win =-1000;
+    int counter = 0;
+    private final Object lock = new Object();
+
+    public float getWin(){
+        synchronized (lock) {
+            float temp = win;
+            return temp;
+        }
+    }
 
     public AsyncSearch(RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug){
-        this.rm = new ThreadLocal<rm>();
+        counter++;
+        //Common.prnRed("new thread="+currentThread().getId()+"; count="+counter);
+        this.rm = rm;
         this.pieceAgent = pieceAgent;
         this.agent = agent;
         this.ns = ns;
@@ -21,9 +32,15 @@ public class AsyncSearch extends Thread{
     }
     
     public void run(){
-        if(pieceAgent)
-            win= rm.heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
-        else
-            win = rm.heurRandMove((byte)(-1*agent), ns, piece, recursion+1, debug);
+        synchronized (lock) {
+            if(pieceAgent){
+                win = rm.heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+            }
+            else{
+                win = rm.heurRandMove((byte)(-1*agent), ns, piece, recursion+1, debug);
+            }
+            //Common.prn("finished, win="+win);
+            rm.incCount();
+        }
     }
 }
