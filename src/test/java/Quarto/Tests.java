@@ -14,8 +14,28 @@ public class Tests {
   public static void main(String[] args) throws InterruptedException {
    //assertTrue(test2() == 42);
    Common.startNanoTimer();
-   test11();
+   test9();
    Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+   Common.startNanoTimer();
+   test13();
+   Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+  }
+  private static void test13(){
+    //heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
+    GameClient gc = new GameClient();
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    int[] results = new int[3];
+    for(int i=0;i<1000;i++){
+     int res = rm.heurLoop(true, (byte)1, rm.currState, (byte)-1, 0, false);
+     if (res==0){
+       results[2]++;
+     } else if(res==1){
+       results[0]++;
+     } else if (res==-1){
+       results[1]++;
+     }
+    }
+    Common.prnRed(""+Arrays.toString(results));
   }
   private static int test12() throws InterruptedException {
     GameClient gc = new GameClient();

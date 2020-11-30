@@ -126,6 +126,7 @@ public class RobotMessiah extends QuartoAgent{
         //for all moves, call bestPiece with each, unless only one move left or won
         float nextBest[] = {-2,-1, -1}; //pos 0 is best MC or tie
         //for all moves (null spots), call bestPiece
+        //put on 7 other threads if recursion = 0
         for(byte i=0; i<5;i++){
             for(byte j=0; j<5; j++){
 
@@ -139,9 +140,10 @@ public class RobotMessiah extends QuartoAgent{
                     float win =0;
                     if(recursion>=limit){
                         for(int k=0; k<MC_LIMIT; k++){
-                            win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
-                            counter++;
-                            //Common.prn("finished, win="+win);
+                            win += heurLoop(true, agent, ns, (byte)-1, 1+recursion, debug);
+                            // heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
+                            // counter++;
+                            // Common.prn("finished, win="+win);
                         }
                         // AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
                         // for(int k=0; k<MC_LIMIT-1; k++){
@@ -209,9 +211,10 @@ public class RobotMessiah extends QuartoAgent{
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] == -1){
                     if(recursion>=limit){
-                        win = 0;
+                        //win = 0;
                         for(int i=0; i<MC_LIMIT; i++){
-                            win += heurRandMove((byte)(-1*agent), s, k, recursion+1, debug);
+                            win += heurLoop(false, (byte)(-1*agent), s, k, 1+recursion, debug);
+                            //win += heurRandMove((byte)(-1*agent), s, k, recursion+1, debug);
                             //Common.prn("finished, win="+win);
                         }
                         // AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
@@ -249,6 +252,315 @@ public class RobotMessiah extends QuartoAgent{
         }
         nextBest[0] *= agent;
         return nextBest;
+    }
+    //controls the spawn of monte carlo search strands
+    public byte initHeurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug){
+        if(pieceAlg){ //pick a piece
+            //shuffle all pieces
+            int[] res = s.randPieces();
+            byte bestPieceOutcome = -1; //opp wins; 0 forced tie, 1 neutral, 2 next wins
+            byte[] bestPieces = new byte[32]; //contains pieces to spawn threads on
+            boolean exit = false;
+            //for all pieces, count unplayed
+            // int unplayed = 0;
+            // for(byte k=0; k< 32 && !exit; k++){
+            //     if(s.pieces[res[k]][0] == -1){
+            //         unplayed++;
+            //     }
+            // }
+            // if(unplayed==0){
+            //     return 0;
+            // }
+            int numBestPieces = 0;
+            //for all pieces
+            for(byte k=0; k< 32 && !exit; k++){
+                //if unplayed
+                if(s.pieces[res[k]][0] == -1){
+                    //shuffle all moves
+                    int[] res2 = s.randMoves();
+                    byte worstMoveOutcome = 2; //-1 opp wins; 0 forced tie, 1 neutral, 2 next maybe wins
+                    boolean exitMove = false;
+                    //for all moves
+                    for(byte i=0; i<5 & !exitMove;i++){
+                        for(byte j=0; j<5 & !exitMove; j++){
+                            //if empty, call heuristic on state with piece inserted
+                            if(s.board[res2[i*5+j]/5][res2[i*5+j]%5] == -1){
+                                GState ns = s.copy();
+                                ns.board[res2[i*5+j]/5][res2[i*5+j]%5] = (byte)res[k];
+                                ns.pieces[res[k]][0]= (byte)(res2[i*5+j]/5);
+                                ns.pieces[res[k]][1]= (byte)(res2[i*5+j]%5);
+                                
+                                byte winH = h.win(ns);
+                                if(winH == 1){
+                                    // don't give this piece
+                                    worstMoveOutcome = -1;
+                                    exitMove = true;
+                                } else if(worstMoveOutcome>-1 && winH == -1){
+                                    //tie better than loss
+                                    worstMoveOutcome =0;
+                                } else if(worstMoveOutcome>0 && winH ==0){
+                                    //neutral
+                                    worstMoveOutcome =1;
+                                } else if(worstMoveOutcome==2 && winH == -2){
+                                    //might be too rare to be worth checking
+                                    worstMoveOutcome =2;
+                                }
+                            }
+                        }
+                    }
+                    if(worstMoveOutcome>bestPieceOutcome){
+                        bestPieceOutcome = worstMoveOutcome;
+                        numBestPieces = 1;
+                        bestPieces = new byte[32]; //erase
+                        bestPieces[0] = (byte)res[k];
+                    } else if(worstMoveOutcome==bestPieceOutcome){
+                        bestPieces[numBestPieces] = (byte)res[k];
+                        numBestPieces++;
+                    }
+                    if(bestPieceOutcome==2){
+                        //might be too rare, exit with >0 instead?
+                        exit=true;
+                    }
+                }
+            }
+            if(bestPieceOutcome == -1){
+                if(debug){
+                    Common.prnYel("piece agent "+agent+" lost at recursion "+recursion);
+                    Common.prn("piece "+bestPieces[0]);
+                    Common.prn(s.toString());
+                }
+                return (byte)(agent*-1);
+            } else if(bestPieceOutcome==0){
+                if (debug){
+                    Common.prnYel("piece agents tied at recursion "+recursion);
+                    Common.prn("piece "+bestPieces[0]);
+                    Common.prn(s.toString());
+                }
+                return 0;
+            } else{
+                //Spawn 7 threads, find the best result
+                agent = (byte)(-1*agent);
+                ++recursion;
+                piece = bestPiece;
+                pieceAlg = !pieceAlg;
+                AsyncSearch2 t[] = new AsyncSearch2[8];
+
+                for(int i =0; i<7;i++){
+                    //heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
+                    t[i] = new AsyncSearch2(this, true, agent, s, (byte)k, recursion, debug);
+                    new Thread(t[i]).start();
+                    //give thread array, start index, and length of subsequence
+                }
+                t[7] = new AsyncSearch2(this, true, agent, s, (byte)k, recursion, debug);
+                t[7].run(); //give main thread something to do
+                float win = t[7].win;
+                byte bestPiece = 7;
+                for(int x=0; x<7; x++){
+                    t[x].join();
+                    float temp = t[x].getWin();
+                    Common.prn("thread="+temp);
+                    if(temp>win){
+
+                    }
+                }
+                win /= 
+            }
+        }
+        else{
+            //for all moves, call bestPiece with each, unless only one move left or won
+            int[] res = s.randMoves();
+            byte bestMoveOutcome = -1; //-1 opp wins; 0 forced tie, 1 neutral, 2 I win
+            GState bestMove = s.copy();
+            int bestMovePos = 0;
+            boolean exitMove = false;
+            for(byte i=0; i<5 & !exitMove;i++){
+                for(byte j=0; j<5 & !exitMove; j++){
+    
+                    if(s.board[res[i*5+j]/5][res[i*5+j]%5] == -1){
+                        //copy game state, add piece to null position
+                        GState ns = s.copy();
+                        ns.board[res[i*5+j]/5][res[i*5+j]%5] = piece;
+                        ns.pieces[piece][0]= (byte)(res[i*5+j]/5);
+                        ns.pieces[piece][1]= (byte)(res[i*5+j]%5);
+                        
+                        byte winH = h.win(ns);
+                        if(winH == 1){
+                            // I win
+                            bestMoveOutcome = 2;
+                            bestMove = ns;
+                            exitMove = true;
+                            bestMovePos = res[i*5+j];
+                        }else if(bestMoveOutcome<0 && winH ==0){
+                            //neutral
+                            bestMove = ns;
+                            bestMoveOutcome =1;
+                        } else if(bestMoveOutcome<0 && winH == -1){
+                            //tie better than loss
+                            bestMove = ns;
+                            bestMoveOutcome =0;
+                            bestMovePos = res[i*5+j];
+                        }
+                    }
+                }
+            }
+            if(bestMoveOutcome == -1){
+                if(debug){
+                    Common.prnRed("move agent "+agent+" lost at recursion "+recursion);
+                    Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                    Common.prn(bestMove.toString());
+                }
+                return (byte)(agent*-1);
+            } else if(bestMoveOutcome==0){
+                if (debug){
+                    Common.prnRed("move agents tied at recursion "+recursion);
+                    Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                    Common.prn(bestMove.toString());
+                }
+                return 0;
+            } else{
+                //return heurRandPiece(agent, bestMove, 1+recursion, debug);
+                s=bestMove;
+                ++recursion;
+                pieceAlg = !pieceAlg;
+            }
+        }
+    }
+    //combines heurRandPiece and heurRandMove to eliminate recursion
+    //reduces time of 1000 iterations by ~0.6s = ~5%
+    public byte heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug){
+        while(true){
+            if(pieceAlg){ //pick a piece
+                //shuffle all pieces
+                int[] res = s.randPieces();
+                byte bestPieceOutcome = -1; //opp wins; 0 forced tie, 1 neutral, 2 next maybe wins
+                byte bestPiece = -1;
+                boolean exit = false;
+                //for all pieces
+                for(byte k=0; k< 32 && !exit; k++){
+                    //if unplayed
+                    if(s.pieces[res[k]][0] == -1){
+                        //shuffle all moves
+                        int[] res2 = s.randMoves();
+                        byte worstMoveOutcome = 2; //-1 opp wins; 0 forced tie, 1 neutral, 2 next maybe wins
+                        boolean exitMove = false;
+                        //for all moves
+                        for(byte i=0; i<5 & !exitMove;i++){
+                            for(byte j=0; j<5 & !exitMove; j++){
+                                //if empty, call heuristic on state with piece inserted
+                                if(s.board[res2[i*5+j]/5][res2[i*5+j]%5] == -1){
+                                    GState ns = s.copy();
+                                    ns.board[res2[i*5+j]/5][res2[i*5+j]%5] = (byte)res[k];
+                                    ns.pieces[res[k]][0]= (byte)(res2[i*5+j]/5);
+                                    ns.pieces[res[k]][1]= (byte)(res2[i*5+j]%5);
+                                    
+                                    byte winH = h.win(ns);
+                                    if(winH == 1){
+                                        // don't give this piece
+                                        worstMoveOutcome = -1;
+                                        exitMove = true;
+                                    } else if(worstMoveOutcome>-1 && winH == -1){
+                                        //tie better than loss
+                                        worstMoveOutcome =0;
+                                    } else if(worstMoveOutcome>0 && winH ==0){
+                                        //neutral
+                                        worstMoveOutcome =1;
+                                    } else if(worstMoveOutcome==2 && winH == -2){
+                                        //might be too rare to be worth checking
+                                        worstMoveOutcome =2;
+                                    }
+                                }
+                            }
+                        }
+                        if(worstMoveOutcome>bestPieceOutcome){
+                            bestPieceOutcome = worstMoveOutcome;
+                            bestPiece = (byte)res[k];
+                        }
+                        if(bestPieceOutcome==2){
+                            //might be too rare, exit with >0 instead?
+                            exit=true;
+                        }
+                    }
+                }
+                if(bestPieceOutcome == -1){
+                    if(debug){
+                        Common.prnYel("piece agent "+agent+" lost at recursion "+recursion);
+                        Common.prn("piece "+bestPiece);
+                        Common.prn(s.toString());
+                    }
+                    return (byte)(agent*-1);
+                } else if(bestPieceOutcome==0){
+                    if (debug){
+                        Common.prnYel("piece agents tied at recursion "+recursion);
+                        Common.prn("piece "+bestPiece);
+                        Common.prn(s.toString());
+                    }
+                    return 0;
+                } else{
+                    agent = (byte)(-1*agent);
+                    ++recursion;
+                    piece = bestPiece;
+                    pieceAlg = !pieceAlg;
+                }
+            }
+            else{
+                //for all moves, call bestPiece with each, unless only one move left or won
+                int[] res = s.randMoves();
+                byte bestMoveOutcome = -1; //-1 opp wins; 0 forced tie, 1 neutral, 2 I win
+                GState bestMove = s.copy();
+                int bestMovePos = 0;
+                boolean exitMove = false;
+                for(byte i=0; i<5 & !exitMove;i++){
+                    for(byte j=0; j<5 & !exitMove; j++){
+        
+                        if(s.board[res[i*5+j]/5][res[i*5+j]%5] == -1){
+                            //copy game state, add piece to null position
+                            GState ns = s.copy();
+                            ns.board[res[i*5+j]/5][res[i*5+j]%5] = piece;
+                            ns.pieces[piece][0]= (byte)(res[i*5+j]/5);
+                            ns.pieces[piece][1]= (byte)(res[i*5+j]%5);
+                            
+                            byte winH = h.win(ns);
+                            if(winH == 1){
+                                // I win
+                                bestMoveOutcome = 2;
+                                bestMove = ns;
+                                exitMove = true;
+                                bestMovePos = res[i*5+j];
+                            }else if(bestMoveOutcome<0 && winH ==0){
+                                //neutral
+                                bestMove = ns;
+                                bestMoveOutcome =1;
+                            } else if(bestMoveOutcome<0 && winH == -1){
+                                //tie better than loss
+                                bestMove = ns;
+                                bestMoveOutcome =0;
+                                bestMovePos = res[i*5+j];
+                            }
+                        }
+                    }
+                }
+                if(bestMoveOutcome == -1){
+                    if(debug){
+                        Common.prnRed("move agent "+agent+" lost at recursion "+recursion);
+                        Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                        Common.prn(bestMove.toString());
+                    }
+                    return (byte)(agent*-1);
+                } else if(bestMoveOutcome==0){
+                    if (debug){
+                        Common.prnRed("move agents tied at recursion "+recursion);
+                        Common.prn("move "+bestMovePos/5+", "+bestMovePos%5+", "+piece);
+                        Common.prn(bestMove.toString());
+                    }
+                    return 0;
+                } else{
+                    //return heurRandPiece(agent, bestMove, 1+recursion, debug);
+                    s=bestMove;
+                    ++recursion;
+                    pieceAlg = !pieceAlg;
+                }
+            }
+        }
     }
     //returns: min wins=-1, tie=0, max wins=1
     //attempts to avoid immediate loss using win()
