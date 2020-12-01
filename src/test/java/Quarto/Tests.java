@@ -14,6 +14,13 @@ public class Tests {
   multi threaded with rand no win 2, limit 3, MC=3 took 9097, returned 0.67 at piece 11
   same with 4MC took 15s, returned 0.5 at piece 0
   same with limit =2, MC=10 took 87ms, returned 0 at piece 31
+  same with limit =3, MC=5 took 30s, returned 0.8 at piece 3
+  same with no multithreading took 112s, returned 0.8 at piece 18
+  same but multithreading and new initheurloop returned 0.5 at piece 3 in 12s
+  same but changed logic, no MT, limit=2 took 1.2s returned 0.5 at piece 19
+  same but MT took 1s returned 0.25 at piece 3
+  same but limit = 10, MC=20, took 677s returned 0 at move 31
+  same but limit = 5, MC = 10
   */
   public static void main(String[] args) throws InterruptedException {
    //assertTrue(test2() == 42);
@@ -28,7 +35,7 @@ public class Tests {
     GameClient gc = new GameClient();
     //"src/test/java/Quarto/rand_no_win4_closer2"
     RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win2");
-    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 2, false)));
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 5, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
     return 1;
