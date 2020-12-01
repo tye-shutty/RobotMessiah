@@ -10,15 +10,28 @@ import java.util.Arrays;
 public class Tests {
   /*
   java -classpath "/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/test-classes:/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/classes" Quarto.Tests
+  Dec 1: multi threaded app with null board MC=4 took 2501438ms, returned a tie at piece 29
+  multi threaded with rand no win 2, limit 3, MC=3 took 9097, returned 0.67 at piece 11
+  same with 4MC took 15s, returned 0.5 at piece 0
+  same with limit =2, MC=10 took 87ms, returned 0 at piece 31
   */
   public static void main(String[] args) throws InterruptedException {
    //assertTrue(test2() == 42);
    Common.startNanoTimer();
-   test9();
+   test7varied();
    Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
-   Common.startNanoTimer();
-   test13();
-   Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+  //  Common.startNanoTimer();
+  //  test13();
+  //  Common.prn(""+Common.getNanosecondsFromTimer()/1000000);
+  }
+  private static int test7varied(){
+    GameClient gc = new GameClient();
+    //"src/test/java/Quarto/rand_no_win4_closer2"
+    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win2");
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 2, false)));
+    Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
+    +rm.h.win(rm.currState));
+    return 1;
   }
   private static void test13(){
     //heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
@@ -113,7 +126,7 @@ public class Tests {
     Common.prn(""+rm.heurRandPiece((byte)1, rm.currState, 0, false));
     return 1;
   }
-  private static int test7() throws InterruptedException {
+  private static int test7(){
     GameClient gc = new GameClient();
     RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4_closer2");
     Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 3, false)));
