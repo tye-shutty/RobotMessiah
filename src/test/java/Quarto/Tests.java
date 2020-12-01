@@ -10,8 +10,9 @@ import java.util.Arrays;
 public class Tests {
   /*
   java -classpath "/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/test-classes:/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/classes" Quarto.Tests
+  
   Dec 1: multi threaded app with null board MC=4 took 2501438ms, returned a tie at piece 29
-  multi threaded with rand no win 2, limit 3, MC=3 took 9097, returned 0.67 at piece 11
+  multi threaded with rand_no_win_2, limit 3, MC=3 took 9097, returned 0.67 at piece 11
   same with 4MC took 15s, returned 0.5 at piece 0
   same with limit =2, MC=10 took 87ms, returned 0 at piece 31
   same with limit =3, MC=5 took 30s, returned 0.8 at piece 3
@@ -19,8 +20,13 @@ public class Tests {
   same but multithreading and new initheurloop returned 0.5 at piece 3 in 12s
   same but changed logic, no MT, limit=2 took 1.2s returned 0.5 at piece 19
   same but MT took 1s returned 0.25 at piece 3
-  same but limit = 10, MC=20, took 677s returned 0 at move 31
-  same but limit = 5, MC = 10
+  same but limit = 10, MC=20, took 677s returned 0 at piece 31
+  same but limit = 5, MC = 10, took 3814s returned 1.3 at piece 26
+  same but MC = 5, less debug printing, took 1538s returned 1.5 at piece 22
+  same but limit = 3, took 12s returned 0.67 at piece 0
+  same but null start, limit=1, MC=1 took 0.7s returned 0 at piece 29 (always...)
+  same but mc=10 took 13s, returned 0.2 at piece 16 (consistent time for 6 trials)
+
   */
   public static void main(String[] args) throws InterruptedException {
    //assertTrue(test2() == 42);
@@ -34,8 +40,9 @@ public class Tests {
   private static int test7varied(){
     GameClient gc = new GameClient();
     //"src/test/java/Quarto/rand_no_win4_closer2"
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win2");
-    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 5, false)));
+    //"src/test/java/Quarto/rand_no_win2"
+    RobotMessiah rm = new RobotMessiah(gc, null);
+    Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
     return 1;

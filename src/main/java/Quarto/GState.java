@@ -1,4 +1,3 @@
-
 package Quarto;
 
 import java.util.Random;

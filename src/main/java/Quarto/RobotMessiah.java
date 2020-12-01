@@ -4,16 +4,15 @@ package Quarto;
 //Adapted from Michael Flemming's code
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.Random;
 
 //maybe override choosePieceTurn(), etc to make more usable arrays 
 public class RobotMessiah extends QuartoAgent {
 
     public GState currState = new GState();
     // variable to test different heuristics
-    public Heuristic h = new LogicHeuristic();
-    public LogicHeuristic lh = new LogicHeuristic();
-    public final int MC_LIMIT = 10;
+    public Heuristic h = new LogicHeuristic(); //for MC 
+    public LogicHeuristic lh = new LogicHeuristic(); //for avoiding immediate loss
+    public int mcLimit = 5;
 
     public RobotMessiah(GameClient gameClient, String stateFileName) {
         super(gameClient, stateFileName); // does error checks
@@ -39,7 +38,6 @@ public class RobotMessiah extends QuartoAgent {
                             }
                             currState.pieces[Integer.parseInt(splitted[col], 2)][0] = row;
                             currState.pieces[Integer.parseInt(splitted[col], 2)][1] = col;
-                            // currState.numPlayed++;
                         }
                     }
                     row++;
@@ -71,58 +69,95 @@ public class RobotMessiah extends QuartoAgent {
         quartoAgent.play();
         gameClient.closeConnection();
     }
+    @Override
+	protected void choosePieceTurn() {
 
+		String MessageFromServer;
+		MessageFromServer = this.gameClient.readFromServer(1000000);
+		String[] splittedMessage = MessageFromServer.split("\\s+");
+
+		//close program if message is not the expected message
+		isExpectedMessage(splittedMessage, SELECT_PIECE_HEADER, true);
+        //send piece to server
+		String pieceMessage = pieceSelectionAlgorithm();
+		this.gameClient.writeToServer(pieceMessage);
+		MessageFromServer = this.gameClient.readFromServer(1000000);
+		String[] splittedResponse = MessageFromServer.split("\\s+");
+		if (!isExpectedMessage(splittedResponse, ACKNOWLEDGMENT_PIECE_HEADER) && 
+			!isExpectedMessage(splittedResponse, ERROR_PIECE_HEADER)) 
+		{
+			turnError(MessageFromServer);
+		}
+        //receive move from server
+		int pieceID = Integer.parseInt(splittedResponse[1], 2);
+		MessageFromServer = this.gameClient.readFromServer(1000000);
+		String[] splittedMoveResponse = MessageFromServer.split("\\s+");
+		isExpectedMessage(splittedMoveResponse, MOVE_MESSAGE_HEADER, true);
+
+		String[] moveString = splittedMoveResponse[1].split(",");
+		int[] move = new int[2];
+		move[0] = Integer.parseInt(moveString[0]);
+		move[1] = Integer.parseInt(moveString[1]);
+
+        //this.quartoBoard.insertPieceOnBoard(move[0], move[1], pieceID);
+        currState.board[move[0]][move[1]] = (byte)pieceID;
+        currState.pieces[pieceID][0] = (byte)move[0];
+        currState.pieces[pieceID][1] = (byte)move[1];
+    }
+    @Override
+	protected void chooseMoveTurn() {
+		//get message
+		String MessageFromServer;
+		MessageFromServer = this.gameClient.readFromServer(1000000);
+		String[] splittedMessage = MessageFromServer.split("\\s+");
+
+		//close program if message is not the expected message
+		isExpectedMessage(splittedMessage, SELECT_MOVE_HEADER, true);
+		int pieceID = Integer.parseInt(splittedMessage[1], 2);
+
+		//determine piece
+		String moveMessage = moveSelectionAlgorithm(pieceID);
+		this.gameClient.writeToServer(moveMessage);
+
+		MessageFromServer = this.gameClient.readFromServer(1000000);
+		String[] splittedMoveResponse = MessageFromServer.split("\\s+");
+		if (!isExpectedMessage(splittedMoveResponse, ACKNOWLEDGMENT_MOVE_HEADER) && !isExpectedMessage(splittedMoveResponse, ERROR_MOVE_HEADER)) {
+			turnError(MessageFromServer);
+		}
+		String[] moveString = splittedMoveResponse[1].split(",");
+		int[] move = new int[2];
+		move[0] = Integer.parseInt(moveString[0]);
+		move[1] = Integer.parseInt(moveString[1]);
+
+		//this.quartoBoard.insertPieceOnBoard(move[0], move[1], pieceID);
+        currState.board[move[0]][move[1]] = (byte)pieceID;
+        currState.pieces[pieceID][0] = (byte)move[0];
+        currState.pieces[pieceID][1] = (byte)move[1];
+	}
     @Override
     protected String pieceSelectionAlgorithm() {
         // if(currState.numPlayed == 0){
         // return random piece
         // }
         // this.startTimer();
-        boolean skip = false;
-        for (int i = 0; i < this.quartoBoard.getNumberOfPieces(); i++) {
-            skip = false;
-            if (!this.quartoBoard.isPieceOnBoard(i)) {
-                for (int row = 0; row < this.quartoBoard.getNumberOfRows(); row++) {
-                    for (int col = 0; col < this.quartoBoard.getNumberOfColumns(); col++) {
-                        if (!this.quartoBoard.isSpaceTaken(row, col)) {
-                            QuartoBoard copyBoard = new QuartoBoard(this.quartoBoard);
-                            copyBoard.insertPieceOnBoard(row, col, i);
-                            if (copyBoard.checkRow(row) || copyBoard.checkColumn(col) || copyBoard.checkDiagonals()) {
-                                skip = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (skip) {
-                        break;
-                    }
-                }
-                if (!skip) {
-                    return String.format("%5s", Integer.toBinaryString(i)).replace(' ', '0');
-                }
+        
+        //count empty spaces/pieces to estimate max depth and max MC possible in 10s
+        int numUnplayed = 0;
+        for (byte k = 0; k < 32; k++) {
+            if (currState.pieces[k][0] == -1) {
+                numUnplayed++;
             }
-            if (this.getMillisecondsFromTimer() > (this.timeLimitForResponse - COMMUNICATION_DELAY)) {
-                // handle for when we are over some imposed time limit(make sure you account for
-                // communication delay)
-            }
-            String message = null;
         }
-        // if we don't find a piece in the above code just grab the first random piece
-        int pieceId = this.quartoBoard.chooseRandomPieceNotPlayed(100);
+        int pieceId = (int)bestPiece((byte)1, currState, 0, 3, false)[1];
         String BinaryString = String.format("%5s", Integer.toBinaryString(pieceId)).replace(' ', '0');
-
         return BinaryString;
     }
-
-    private final Object lock = new Object();
-    int counter = 0;
-
-    public int incCount() {
-        synchronized (lock) {
-            return ++counter;
-        }
+    @Override
+    protected String moveSelectionAlgorithm(int pieceID){
+        
+        float[] move = bestMove((byte)1, currState, (byte)pieceID, 0, 3, false);
+        return (int)move[1] + "," + (int)move[2];
     }
-
     // 0 is min wins=-1, tie=0, max wins=1; 1&2 are move coords resulting in best
     // outcome, -1 if no move.
     // agent is -1 if min agent, 1 if max
@@ -210,13 +245,8 @@ public class RobotMessiah extends QuartoAgent {
                     float win = 0;
                     if (recursion >= limit) {
                         win = initHeurLoop(true, agent, ns, (byte)-1, recursion+1, debug);
-                        //initHeurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
-                        // for (int k = 0; k < MC_LIMIT; k++) {
-                        //     win += heurLoop(true, agent, ns, (byte) -1, 1 + recursion, debug);
-                        // }
                         if(debug)
                             Common.prn("MC (move) finished, win="+win);
-                        //win /= MC_LIMIT;
                     } else {
                         win = bestPiece(agent, ns, 1 + recursion, limit, debug)[0]; // agent doesn't change
                         debug = false;  //depth only debugging
@@ -245,7 +275,7 @@ public class RobotMessiah extends QuartoAgent {
         return nextBest;
     }
 
-    // 0 is min wins=-1, tie=0, max wins=1; 1 is piece resulting in best outcome, -1
+    // pos 0 is min wins=-1, tie=0, max wins=1; pos 1 is piece resulting in best outcome, -1
     // if no piece.
     // float values between -1 and 1 represent value of monte carlo
     // limit must be > 0
@@ -335,12 +365,7 @@ public class RobotMessiah extends QuartoAgent {
             for(byte k=0; k< 32; k++){
                 if(s.pieces[k][0] == -1){
                     if(recursion>=limit){
-                        //initHeurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
                         win = initHeurLoop(false, (byte)(-1*agent), s, k, 1+recursion, debug);
-                        // for(int i=0; i<MC_LIMIT; i++){
-                        //     win += heurLoop(false, (byte)(-1*agent), s, k, 1+recursion, debug);
-                        // }
-                        // win /= MC_LIMIT;
                         if(debug)
                             Common.prn("MC finished, win="+win);
                     } else{
@@ -365,7 +390,7 @@ public class RobotMessiah extends QuartoAgent {
         return nextBest;
     }
     //controls the looping of monte carlo search strands
-    //for all best moves (that don't immediately tie or lose), call bestMove on MC_LIMIT of them
+    //for all best moves (that don't immediately tie or lose), call bestMove on mcLimit of them
     public float initHeurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug){
         if(pieceAlg){ //pick a piece
             //shuffle all pieces
@@ -442,8 +467,8 @@ public class RobotMessiah extends QuartoAgent {
             } else{
                 //MC time!
                 float win = 0;
-                byte minMC = (numBestPieces < MC_LIMIT) ? numBestPieces : MC_LIMIT;
-                int numRep = (numBestPieces < MC_LIMIT) ? (MC_LIMIT / numBestPieces) : 1;
+                int minMC = (numBestPieces < mcLimit) ? numBestPieces : mcLimit;
+                int numRep = (numBestPieces < mcLimit) ? (mcLimit / numBestPieces) : 1;
                 if (debug)
                     Common.prn("numMC="+minMC);
                 for(int i=0; i<minMC; i++){
@@ -521,8 +546,8 @@ public class RobotMessiah extends QuartoAgent {
             } else{
                 //MC time!
                 float win = 0;
-                int minMC = (numBestMoves < MC_LIMIT) ? numBestMoves : MC_LIMIT;
-                int numRep = (numBestMoves < MC_LIMIT) ? (MC_LIMIT / numBestMoves) : 1;
+                int minMC = (numBestMoves < mcLimit) ? numBestMoves : mcLimit;
+                int numRep = (numBestMoves < mcLimit) ? (mcLimit / numBestMoves) : 1;
                 for(int i=0; i<minMC; i++){
                     //heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
                     for(int j=0; j<numRep; j++){ //ideally would ensure unique starting point at next
@@ -864,85 +889,11 @@ public class RobotMessiah extends QuartoAgent {
         return winPossibilities;
     }
      */
-    @Override
-    protected String moveSelectionAlgorithm(int pieceID){
-        /*
-        this.startNanoTimer();
-        QuartoPiece curr = this.quartoBoard.getPiece(pieceID);
-        int[] chars ={0,0,0,0,0};
-        for(int j=0; j<5; j++){
-            chars[j] = curr.getCharacteristicsArray()[j] ? 1 : 0;
+    private final Object lock = new Object();
+    int counter = 0;
+    public int incCount() {
+        synchronized (lock) {
+            return ++counter;
         }
-
-        //check rows and columns for a winning move
-        boolean pivot = false;
-        for(int i=0; i<5; i++){
-            int nullCount = 0;
-            int[] currChars = new int[5];
-            System.arraycopy(chars, 0, currChars, 0, 5);
-            int nullj = -1;
-            for(int j=0; j<5; j++){
-                if(pivotLookup(this.quartoBoard.board, pivot,i,j) == null){
-                    nullCount++;
-                    nullj = j;
-                    if(nullCount > 1){
-                        break;
-                    }
-                } else{
-                    boolean[] rc = pivotLookup(this.quartoBoard.board, pivot,i,j).getCharacteristicsArray();
-                    for(int z=0;z<5;z++){
-                        currChars[z] += rc[z] ? 1 : 0;
-                    }
-                }
-            }
-            if(nullCount == 1){
-                for(int j=0; j<5; j++){
-                    if(currChars[j] == 0 || currChars[j] == 5){
-                        Common.prnRed("row or col solution: "+this.getNanosecondsFromTimer()+"ns");
-                        return pivot ? nullj+","+i : i+","+nullj;
-                    }
-                }
-            }
-            if(i==4 && pivot == false){
-                i=-1;
-                pivot=true;
-            }
-        }
-        //check diagonals
-        for(int[] i={0,1}; i[1]>-3; i[0]=4, i[1]-=2){
-            int[] currChars = chars;
-            int nullCount = 0;
-            int nullj = -1;
-            for(int j=0; j<5; j++){
-                if(this.quartoBoard.board[j][i[0]+i[1]*j] == null){
-                    nullCount++;
-                    nullj = j;
-                    if(nullCount > 1){
-                        break;
-                    }
-                } else{
-                    boolean[] rc = this.quartoBoard.board[j][i[0]+i[1]*j].getCharacteristicsArray();
-                    for(int z=0;z<5;z++){
-                        currChars[z] += rc[z] ? 1 : 0;
-                    }
-                }
-            }
-            if(nullCount == 1){
-                for(int j=0; j<5; j++){
-                    if(currChars[j] == 0 || currChars[j] == 5){
-                        Common.prnRed("diagonal solution: "+this.getNanosecondsFromTimer()+"ns");
-                        return nullj+","+(i[0]+nullj*i[1]);
-                    }
-                }
-            }
-        }*/
-
-        // If no winning move is found in the above code, then return a random(unoccupied) square
-        int[] move = new int[2];
-        QuartoBoard copyBoard = new QuartoBoard(this.quartoBoard);
-        move = copyBoard.chooseRandomPositionNotPlayed(100);
-
-        //Common.prnRed("random solution: "+this.getNanosecondsFromTimer()+"ns");
-        return move[0] + "," + move[1];
     }
 }
