@@ -5,6 +5,7 @@ public class Common {
   public static String red = "\u001B[31m";
   public static String yellow = "\u001B[33m";
   public static String white = "\u001B[37m";
+  public static String green = "\u001B[32m";
 
   public static void prn(String s){
     System.out.println(s);
@@ -14,6 +15,9 @@ public class Common {
   }
   public static void prnYel(String s){
     System.out.println(yellow+s+white);
+  }
+  public static void prnGre(String s){
+    System.out.println(green+s+white);
   }
   public static void pr(String s){
     System.out.print(s);

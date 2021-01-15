@@ -1,6 +1,6 @@
-
+import java.util.Arrays;
 public class AsyncSearch2 extends Thread{
-    RobotMessiah rm;
+    QuartoPlayerAgent rm;
     boolean debug;
     boolean pieceAgent;
     byte agent;
@@ -8,16 +8,19 @@ public class AsyncSearch2 extends Thread{
     byte[] piece;
     int recursion;
     int limit;
-    float win[];
+    volatile float win[];
     private final Object lock = new Object();
 
     public float[] getWin(){
         synchronized (lock) {
-            return win;  //shouldn't need to copy
+            // float[] newArr = new float[win.length];
+            // System.arraycopy(win, 0, newArr, 0, win.length);
+            // return newArr;  //shouldn't need to copy?
+            return win;
         }
     }
 
-    public AsyncSearch2(RobotMessiah rm, boolean pieceAgent, byte agent, GState[] ns, byte[] piece, 
+    public AsyncSearch2(QuartoPlayerAgent rm, boolean pieceAgent, byte agent, GState[] ns, byte[] piece, 
     int recursion, int limit, boolean debug)
     {
         //Common.prnRed("new thread="+currentThread().getId()+"; count="+counter);
@@ -38,14 +41,16 @@ public class AsyncSearch2 extends Thread{
             if(pieceAgent){
                 for(int i=0;i<piece.length; i++){
                     //Common.prnYel("run piece="+piece[i]);
-                    win[i] = rm.bestMove((byte)(-1*agent), ns[0], piece[i], 1+recursion, limit, debug)[0];
+                    win[i] = rm.bestMove((byte)(-1*agent), ns[0], piece[i], recursion+1, limit, debug)[0];
+                    //increase recursion, because this is like the last step of the pieceAgent,
+                    //and recursion was not increased in the call to AsyncSearch2().
                 }
             }
             else{
                 for(int i=0;i<ns.length; i++)
-                    win[i] = rm.bestPiece(agent, ns[i], 1+recursion, limit, debug)[0];
+                    win[i] = rm.bestPiece(agent, ns[i], recursion+1, limit, debug)[0];
             }
-            //Common.prn("finished, win="+win);
+            //Common.prn("finished, win="+Arrays.toString(win));
             //rm.incCount();
         }
     }

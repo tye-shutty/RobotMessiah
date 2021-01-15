@@ -21,7 +21,7 @@ public class QuartoServer {
 	public static final String TURN_TIME_LIMIT_HEADER = "TURN_TIME_LIMIT: ";
 
 	//time limit is in milliseconds
-	private static final int TIME_LIMIT_FOR_RESPONSE = 1000000;
+	private static final int TIME_LIMIT_FOR_RESPONSE = 10000;
 
 	GameServer gameServer;
 	QuartoBoard quartoBoard;

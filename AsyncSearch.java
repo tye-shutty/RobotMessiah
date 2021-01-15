@@ -1,6 +1,6 @@
 
 public class AsyncSearch extends Thread{
-    RobotMessiah rm;
+    QuartoPlayerAgent rm;
     boolean debug;
     boolean pieceAgent;
     byte agent;
@@ -18,7 +18,7 @@ public class AsyncSearch extends Thread{
         }
     }
 
-    public AsyncSearch(RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug){
+    public AsyncSearch(QuartoPlayerAgent rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug){
         counter++;
         //Common.prnRed("new thread="+currentThread().getId()+"; count="+counter);
         this.rm = rm;

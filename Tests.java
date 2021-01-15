@@ -8,7 +8,7 @@ import java.util.Arrays;
 
 public class Tests {
   /*
-  java -classpath "/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/test-classes:/home/tye/Dropbox/cs4725/quarto/RobotMessiah/target/classes" Quarto.Tests
+  java -classpath "/home/tye/Dropbox/cs4725/quarto/QuartoPlayerAgent/target/test-classes:/home/tye/Dropbox/cs4725/quarto/QuartoPlayerAgent/target/classes" Quarto.Tests
   
   Dec 1: multi threaded app with null board MC=4 took 2501438ms, returned a tie at piece 29
   multi threaded with rand_no_win_2, limit 3, MC=3 took 9097, returned 0.67 at piece 11
@@ -60,8 +60,9 @@ public class Tests {
     GameClient gc = new GameClient();
     //"src/test/java/Quarto/rand_no_win4_closer2"
     //"src/test/java/Quarto/rand_no_win2"
-    RobotMessiah rm = new RobotMessiah(gc, "18pieces");
-    Common.prn(rm.pieceSelectionAlgorithm());
+    //"donotplay00110at3-0"
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
+    Common.prn(rm.moveSelectionAlgorithm(6));
 
     // Common.prn("counter="+rm.counter);
     // Common.prn("counter2="+rm.counter2);
@@ -73,7 +74,7 @@ public class Tests {
     GameClient gc = new GameClient();
     //"src/test/java/Quarto/rand_no_win4_closer2"
     //"src/test/java/Quarto/rand_no_win2"
-    RobotMessiah rm = new RobotMessiah(gc, "winwith00011diagonal");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "winwith00011diagonal");
     Common.prn(Arrays.toString(rm.bestMove((byte)1, rm.currState, (byte)3, 0, 5, true)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
@@ -89,7 +90,7 @@ public class Tests {
     GameClient gc = new GameClient();
     //"src/test/java/Quarto/rand_no_win4_closer2"
     //"src/test/java/Quarto/rand_no_win2"
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 2, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
@@ -98,7 +99,7 @@ public class Tests {
   private static void test13(){
     //heurLoop(boolean pieceAlg, byte agent, GState s, byte piece, int recursion, boolean debug)
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     int[] results = new int[3];
     for(int i=0;i<1000;i++){
      int res = rm.heurLoop(true, (byte)1, rm.currState, (byte)-1, 0, false);
@@ -114,7 +115,7 @@ public class Tests {
   }
   private static int test12() throws InterruptedException {
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     //Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
     //Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     //+rm.h.win(rm.currState));
@@ -123,7 +124,7 @@ public class Tests {
 
     AsyncSearch t[] = new AsyncSearch[MC_LIMIT];
     for(int k=0; k<3; k++){
-        //RobotMessiah rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
+        //QuartoPlayerAgent rm, boolean pieceAgent, byte agent, GState ns, byte piece, int recursion, boolean debug
         t[k] = new AsyncSearch(rm, false, agent, rm.currState, (byte)0, 0, false);
         new Thread(t[k]).start();
         //win+= heurRandPiece(agent, ns, recursion+1, debug); //chose different pieces?
@@ -147,14 +148,14 @@ public class Tests {
   }
   private static int testLogicHeur(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/moveagentloseswithpiece2");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "src/test/java/Quarto/moveagentloseswithpiece2");
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
     return 1;
   }
   private static int test11() throws InterruptedException {
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 1, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
@@ -163,12 +164,12 @@ public class Tests {
   }
   private static void test10(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/pieceagentlost2-0&1samechar");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "src/test/java/Quarto/pieceagentlost2-0&1samechar");
     Common.prn(""+rm.h.win(rm.currState));
   }
   // private static void test9(){
   //   GameClient gc = new GameClient();
-  //   RobotMessiah rm = new RobotMessiah(gc, null);
+  //   QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
   //   int[] results = new int[3];
   //   for(int i=0;i<1000;i++){
   //    int res = rm.heurRandPiece((byte)1, rm.currState, 0, false);
@@ -184,13 +185,13 @@ public class Tests {
   // }
   // private static int test8(){
   //   GameClient gc = new GameClient();
-  //   RobotMessiah rm = new RobotMessiah(gc, null);
+  //   QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
   //   Common.prn(""+rm.heurRandPiece((byte)1, rm.currState, 0, false));
   //   return 1;
   // }
   private static int test7(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4_closer2");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "src/test/java/Quarto/rand_no_win4_closer2");
     Common.prn(Arrays.toString(rm.bestPiece((byte)1, rm.currState, 0, 3, false)));
     Common.prn("init win status (1=win, 0=no win, -1 no possible win, -2 next player always wins)= "
     +rm.h.win(rm.currState));
@@ -198,13 +199,13 @@ public class Tests {
   }
   private static int test6(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/rand_no_win4");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "src/test/java/Quarto/rand_no_win4");
     Common.prn(rm.currState.toString());
     return 1;
   }
   private static int test5(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     GState rs = rm.currState.randState(7);
     Common.prn(rs.toString());
     Common.prn(""+rm.lh.win(rs));
@@ -213,11 +214,11 @@ public class Tests {
   /*
   private static int test4(){
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, null);
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, null);
     // try{
     //   FileWriter fw = new FileWriter("test3");
     //   fw.write(rm.currState.toString());
-    //   RobotMessiah.state s = rm.currState.copy();
+    //   QuartoPlayerAgent.state s = rm.currState.copy();
     //   fw.append(s.toString());
     //   fw.close();
     // } catch(Exception e){}
@@ -228,21 +229,21 @@ public class Tests {
   private static int test2(){
     //QuartoBoard qboard = new QuartoBoard(5, 5, 32, "near_win_state_diagonal");
     GameClient gc = new GameClient();
-    RobotMessiah rm = new RobotMessiah(gc, "near_win_state_diagonal");
+    QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "near_win_state_diagonal");
     return rm.heuristic(rm.quartoBoard.board);
   }*/
   // private static int test3(){
   //   GameClient gc = new GameClient();
-  //   RobotMessiah rm = new RobotMessiah(gc, "src/test/java/Quarto/near_win_state_diagonal");
+  //   QuartoPlayerAgent rm = new QuartoPlayerAgent(gc, "src/test/java/Quarto/near_win_state_diagonal");
   //   // try{
   //   //   FileWriter fw = new FileWriter("test3");
   //   //   fw.write(rm.currState.toString());
-  //   //   RobotMessiah.state s = rm.currState.copy();
+  //   //   QuartoPlayerAgent.state s = rm.currState.copy();
   //   //   fw.append(s.toString());
   //   //   fw.close();
   //   // } catch(Exception e){}
   //   Common.prn(rm.currState.toString());
-  //   RobotMessiah.state s = rm.currState.copy();
+  //   QuartoPlayerAgent.state s = rm.currState.copy();
   //   Common.prn(s.toString());
   //   return 1;
   // }
